@@ -2,7 +2,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Callable, Iterable, Iterator, Any
 from enum import Enum
-from .symbol import Symbol, symbol
+from numbers import Number
+from .symbol import Symbol
         
 class Head(Enum):
     init    = "init"
@@ -18,6 +19,7 @@ class Head(Enum):
     comment = "comment"
     assert_ = "assert_"
 
+_EXEC = (Head.init, Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem)
 
 class Expr:
     n: int = 0
@@ -84,7 +86,7 @@ class Expr:
     def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
         _globals = {sym.name: v for sym, v in _globals.items()}
         _locals = {sym.name: v for sym, v in _locals.items()}
-        if self.head in (Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem):
+        if self.head in _EXEC:
             return exec(str(self), _globals, _locals)
         else:
             return eval(str(self), _globals, _locals)
@@ -193,3 +195,50 @@ class Expr:
             else:
                 arg.args[0] = new
         return self
+
+
+def make_symbol_str(obj: Any):
+    return f"var{hex(id(obj))}"
+
+def symbol(obj: Any) -> Symbol:
+    if isinstance(obj, (Symbol, Expr)):
+        return obj
+    
+    valid = True
+    objtype = type(obj)
+    if isinstance(obj, str):
+        seq = repr(obj)
+    elif isinstance(obj, Number): # int, float, bool, ...
+        seq = obj
+    elif isinstance(obj, tuple):
+        seq = "(" + ", ".join(symbol(a)._name for a in obj) + ")"
+        if objtype is not tuple:
+            seq = objtype.__name__ + seq
+    elif isinstance(obj, list):
+        seq = "[" + ", ".join(symbol(a)._name for a in obj) + "]"
+        if objtype is not list:
+            seq = f"{objtype.__name__}({seq})"
+    elif isinstance(obj, dict):
+        seq = "{" + ", ".join(f"{symbol(k)}: {symbol(v)}" for k, v in obj.items()) + "}"
+        if objtype is not dict:
+            seq = f"{objtype.__name__}({seq})"
+    elif isinstance(obj, set):
+        seq = "{" + ", ".join(symbol(a)._name for a in obj) + "}"
+        if objtype is not set:
+            seq = f"{objtype.__name__}({seq})"
+    elif isinstance(obj, slice):
+        seq = f"{objtype.__name__}({obj.start}, {obj.stop}, {obj.step})"
+    elif objtype in Symbol._type_map:
+        seq = Symbol._type_map[objtype](obj)
+    else:
+        for k, func in Symbol._type_map.items():
+            if isinstance(obj, k):
+                seq = func(obj)
+                break
+        else:
+            seq = make_symbol_str(obj) # hexadecimals are easier to distinguish
+            valid = False
+            
+    sym = Symbol(seq, id(obj), type(obj))
+    sym.valid = valid
+    return sym

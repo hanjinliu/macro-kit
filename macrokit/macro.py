@@ -7,8 +7,8 @@ from collections import UserList
 from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar
 from types import ModuleType
 
-from .expression import Head, Expr
-from .symbol import Symbol, make_symbol_str, symbol
+from .expression import Head, Expr, symbol, make_symbol_str
+from .symbol import Symbol
 
 # types
 MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
@@ -57,6 +57,11 @@ class Macro(UserList):
     def dump(self) -> str:
         return ",\n".join(expr.dump() for expr in self)
     
+    def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
+        for expr in self:
+            out = expr.eval(_globals, _locals)
+        return out
+    
     @contextmanager
     def blocked(self):
         """
@@ -78,10 +83,7 @@ class Macro(UserList):
             raise TypeError("No format method matched the input.")
         
         return self.__class__(expr.format(m, inplace=inplace) for expr in self)
-    
-    def fix_names(self):
-        ...
-    
+        
     def record(self, 
                obj: Recordable = None, 
                *, 
@@ -109,6 +111,8 @@ class Macro(UserList):
                 continue
             if callable(attr) or isinstance(attr, property):
                 _dict[name] = self.record(attr, returned_callback=returned_callback)
+            elif isinstance(attr, MacroMixin):
+                update_namespace(attr)
         
         newcls = type(cls.__name__, (MacroMixin,) + cls.__bases__, _dict)
         
@@ -132,7 +136,15 @@ class Macro(UserList):
 class MacroMixin:
     pass
 
-class MObject(MacroMixin):
+def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
+    new = Expr(Head.getattr, [namespace, symbol(obj)])
+    for name, attr in inspect.getmembers(obj):
+        if isinstance(attr, MObject):
+            attr.namespace = namespace
+        elif isinstance(attr, MacroMixin):
+            update_namespace(attr, new)
+    
+class MObject:
     obj: Any
     def __init__(self, obj: Any, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None) -> None:
@@ -153,11 +165,11 @@ class MObject(MacroMixin):
         
         self._last_expr: Expr = None
     
-    def to_namespace(self) -> Symbol | Expr:
+    def to_namespace(self, obj) -> Symbol | Expr:
         if self.namespace is None:
-            return Symbol(self.obj.__name__)
+            return symbol(obj)
         else:
-            return Expr(Head.getattr, [self.namespace, Symbol(self.obj.__name__)])
+            return Expr(Head.getattr, [self.namespace, symbol(obj)])
             
 class MFunction(MObject):
     obj: Callable
@@ -177,7 +189,7 @@ class MFunction(MObject):
         with self.macro.blocked():
             out = self.obj(*args, **kwargs)
         if self.macro.active:
-            expr = Expr.parse_call(self.obj, args, kwargs)
+            expr = Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
             line = self.returned_callback(expr, out)
             self.macro.append(line)
             self._last_expr = expr
@@ -187,19 +199,19 @@ class MFunction(MObject):
         fname = self.obj.__name__
         if fname == "__init__":
             def make_expr(obj: _O, *args, **kwargs):
-                return Expr.parse_init(obj, obj.__class__, args, kwargs)
+                return Expr.parse_init(self.to_namespace(obj), obj.__class__, args, kwargs)
         elif fname == "__call__":
             def make_expr(obj: _O, *args, **kwargs):
-                return Expr.parse_call(obj, args, kwargs)
+                return Expr.parse_call(self.to_namespace(obj), args, kwargs)
         elif fname == "__getitem__":
             def make_expr(obj: _O, *args):
-                return Expr(Head.getitem, [obj, args[0]])
+                return Expr(Head.getitem, [self.to_namespace(obj), args[0]])
         elif fname == "__getattr__":
             def make_expr(obj: _O, *args):
-                return Expr(Head.getattr, [obj, Symbol(args[0])])
+                return Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
         elif fname == "__setitem__":
             def make_expr(obj: _O, *args):
-                expr = Expr(Head.setitem, [obj, args[0], args[1]])
+                expr = Expr(Head.setitem, [self.to_namespace(obj), args[0], args[1]])
                 if (self._last_expr is not None
                     and self._last_expr.head == Head.setitem
                     and self._last_expr.args[1].args[0] == expr.args[1].args[0]
@@ -208,7 +220,7 @@ class MFunction(MObject):
                 return expr
         elif fname == "__setattr__":
             def make_expr(obj: _O, *args):
-                expr = Expr(Head.setattr, [obj, Symbol(args[0]), args[1]])
+                expr = Expr(Head.setattr, [self.to_namespace(obj), Symbol(args[0]), args[1]])
                 if (self._last_expr is not None
                     and self._last_expr.head == Head.setattr
                     and self._last_expr.args[1].args[0] == expr.args[1].args[0]
@@ -217,16 +229,17 @@ class MFunction(MObject):
                 return expr
         elif fname == "__delitem__":
             def make_expr(obj: _O, *args):
-                return Expr(Head.delitem, [obj, args[0]])
+                return Expr(Head.delitem, [self.to_namespace(obj), args[0]])
         elif fname == "__delattr__":
             def make_expr(obj: _O, *args):
-                return Expr(Head.delattr, [obj, Symbol(args[0])])
+                return Expr(Head.delattr, [self.to_namespace(obj), Symbol(args[0])])
         else:
             def make_expr(obj: _O, *args, **kwargs):
-                return Expr.parse_method(obj, self.obj, args, kwargs)
+                return Expr.parse_method(self.to_namespace(obj), self.obj, args, kwargs)
         
         @wraps(self.obj)
         def method(obj: _O, *args, **kwargs):
+            # TODO: need namespace?
             with self.macro.blocked():
                 out = self.obj(obj, *args, **kwargs)
             if self.macro.active:
@@ -262,7 +275,7 @@ class MProperty(MObject):
             with self.macro.blocked():
                 out = fset(obj, value)
             if self.macro.active:
-                expr = Expr(Head.setattr, [obj, key, value])
+                expr = Expr(Head.setattr, [self.to_namespace(obj), key, value])
                 if (self._last_expr is not None
                     and self._last_expr.head == Head.setattr
                     and self._last_expr.args[1].args[0] == expr.args[1].args[0]
@@ -283,7 +296,7 @@ class MProperty(MObject):
             with self.macro.blocked():
                 out = fdel(obj)
             if self.macro.active:
-                expr = Expr(Head.delattr, [obj, key])
+                expr = Expr(Head.delattr, [self.to_namespace(obj), key])
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
                 self._last_expr = expr
@@ -306,7 +319,7 @@ class MModule(MObject):
         except AttributeError:
             try:
                 submod = import_module("." + key, self.obj.__name__)
-                mmod = MModule(submod, self.macro, self.returned_callback, self.to_namespace())
+                mmod = MModule(submod, self.macro, self.returned_callback, self.to_namespace(self.obj))
             except ModuleNotFoundError:
                 raise ValueError(f"No function or submodule named '{key}'.")
             else:
@@ -319,10 +332,10 @@ class MModule(MObject):
                 out = func(*args, **kwargs)
             if self.macro.active:
                 if isinstance(func, type):
-                    cls = Expr(Head.getattr, [self.obj, Symbol(out.__class__.__name__)])
+                    cls = Expr(Head.getattr, [self.to_namespace(self.obj), Symbol(out.__class__.__name__)])
                     expr = Expr.parse_init(out, cls, args, kwargs)    
                 else:
-                    expr = Expr.parse_method(self.obj, func, args, kwargs)
+                    expr = Expr.parse_method(self.to_namespace(self.obj), func, args, kwargs)
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
                 self._last_expr = expr

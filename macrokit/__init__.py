@@ -1,7 +1,7 @@
 __version__ = "0.0.1dev0"
 
-from .symbol import Symbol, symbol, register_type
-from .expression import Expr, Head
+from .symbol import Symbol, register_type
+from .expression import Expr, Head, symbol
 from .macro import Macro
 from functools import wraps
 

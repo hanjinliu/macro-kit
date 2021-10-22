@@ -1,5 +1,6 @@
 from __future__ import annotations
 from contextlib import contextmanager
+from importlib import import_module
 from functools import partial, wraps
 import inspect
 from collections import UserList
@@ -209,16 +210,28 @@ class MClass(MObject):
 class MModule(MObject):
     obj: ModuleType
     def __getattr__(self, key: str):
-        func = getattr(self.obj, key)
-        if inspect.ismodule(func):
-            return MModule(self.obj, self.macro, self.returned_callback)
+        try:
+            func = getattr(self.obj, key)
+        except AttributeError:
+            try:
+                submod = import_module("." + key, self.obj.__name__)
+                mmod = MModule(submod, self.macro, self.returned_callback)
+            except ModuleNotFoundError:
+                raise ValueError(f"Could not find any function or submodule named '{key}'.")
+            else:
+                setattr(self, key, mmod)
+            return mmod
+        
         @wraps(func)
         def mfunc(*args, **kwargs):
             with self.macro.blocked():
                 out = func(*args, **kwargs)
             if self.macro.active:
-                # TODO: maybe init
-                expr = Expr.parse_method(self.obj, func, args, kwargs)
+                if isinstance(func, type):
+                    cls = Expr(Head.getattr, [self.obj, Symbol(out.__class__.__name__)])
+                    expr = Expr.parse_init(out, cls, args, kwargs)    
+                else:
+                    expr = Expr.parse_method(self.obj, func, args, kwargs)
                 line = self.returned_callback(expr)
                 self.macro.append(line)
                 self._last_expr = expr

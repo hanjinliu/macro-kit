@@ -15,8 +15,8 @@ class Head(Enum):
     call    = "call"
     assign  = "assign"
     value   = "value"
-    assert_ = "assert_"
     comment = "comment"
+    assert_ = "assert_"
 
 
 class Expr:
@@ -92,7 +92,7 @@ class Expr:
     def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
         _globals = {sym.data: v for sym, v in _globals.items()}
         _locals = {sym.data: v for sym, v in _locals.items()}
-        if self.head in (Head.assign, Head.setitem, Head.setattr, Head.assert_):
+        if self.head in (Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem):
             return exec(str(self), _globals, _locals)
         else:
             return eval(str(self), _globals, _locals)

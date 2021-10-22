@@ -203,6 +203,7 @@ class MProperty(MObject):
             return self.obj.__get__(obj)
 
 class MClass(MObject):
+    obj: type
     ...
     
 class MModule(MObject):
@@ -216,6 +217,7 @@ class MModule(MObject):
             with self.macro.blocked():
                 out = func(*args, **kwargs)
             if self.macro.active:
+                # TODO: maybe init
                 expr = Expr.parse_method(self.obj, func, args, kwargs)
                 line = self.returned_callback(expr)
                 self.macro.append(line)

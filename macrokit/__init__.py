@@ -1,3 +1,5 @@
+__version__ = "0.0.1dev0"
+
 from .symbol import Symbol, symbol, register_type
 from .expression import Expr, Head
 from .macro import Macro
@@ -22,7 +24,10 @@ def record(obj = None, *, returned_callback = None):
 def property(prop):
     return _MACRO.property(prop)
 
-def get_macro():
+def dump() -> str:
+    return _MACRO.dump()
+
+def get_macro() -> str:
     return str(_MACRO)
 
 del wraps

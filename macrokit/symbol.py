@@ -22,16 +22,28 @@ class Symbol:
     }
     
     def __init__(self, seq: str, object_id: int = None, type: type = Any):
-        self.data = str(seq)
+        self.name = str(seq)
         self.object_id = object_id or id(seq)
         self.type = type
         self.valid = True
     
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, newname: str):
+        if not isinstance(newname, str):
+            raise TypeError("Cannot set non-string to name.")
+        elif not newname.isidentifier():
+            raise ValueError("Cannot set non-identifier to name.")
+        self._name = newname
+    
     def __repr__(self) -> str:
-        return self.data
+        return ":" + self._name
     
     def __str__(self) -> str:
-        return self.data
+        return self._name
     
     def __hash__(self) -> int:
         return self.object_id
@@ -42,7 +54,7 @@ class Symbol:
         return self.object_id == other.object_id
     
     def as_parameter(self, default=inspect._empty):
-        return inspect.Parameter(self.data, 
+        return inspect.Parameter(self._name, 
                                  inspect.Parameter.POSITIONAL_OR_KEYWORD, 
                                  default=default,
                                  annotation=self.type)
@@ -53,6 +65,9 @@ class Symbol:
             raise TypeError("The second argument must be callable.")
         cls._type_map[type] = function
         
+def make_symbol_str(obj: Any):
+    return f"var{hex(id(obj))}"
+
 def symbol(obj: Any) -> Symbol:
     if isinstance(obj, Symbol):
         return obj
@@ -64,11 +79,11 @@ def symbol(obj: Any) -> Symbol:
     elif np.isscalar(obj): # int, float, bool, ...
         seq = obj
     elif isinstance(obj, tuple):
-        seq = "(" + ", ".join(symbol(a).data for a in obj) + ")"
+        seq = "(" + ", ".join(symbol(a)._name for a in obj) + ")"
         if objtype is not tuple:
             seq = objtype.__name__ + seq
     elif isinstance(obj, list):
-        seq = "[" + ", ".join(symbol(a).data for a in obj) + "]"
+        seq = "[" + ", ".join(symbol(a)._name for a in obj) + "]"
         if objtype is not list:
             seq = f"{objtype.__name__}({seq})"
     elif isinstance(obj, dict):
@@ -76,7 +91,7 @@ def symbol(obj: Any) -> Symbol:
         if objtype is not dict:
             seq = f"{objtype.__name__}({seq})"
     elif isinstance(obj, set):
-        seq = "{" + ", ".join(symbol(a).data for a in obj) + "}"
+        seq = "{" + ", ".join(symbol(a)._name for a in obj) + "}"
         if objtype is not set:
             seq = f"{objtype.__name__}({seq})"
     elif isinstance(obj, slice):
@@ -89,7 +104,7 @@ def symbol(obj: Any) -> Symbol:
                 seq = func(obj)
                 break
         else:
-            seq = f"var{hex(id(obj))}" # hexadecimals are easier to distinguish
+            seq = make_symbol_str(obj) # hexadecimals are easier to distinguish
             valid = False
             
     sym = Symbol(seq, id(obj), type(obj))

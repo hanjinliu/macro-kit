@@ -20,14 +20,6 @@ class Head(Enum):
 
 
 class Expr:
-    """
-    Python expression class. Inspired by Julia (https://docs.julialang.org/en/v1/manual/metaprogramming/),
-    this class enables efficient macro recording and macro operation.
-    
-    Expr objects are mainly composed of "head" and "args". "Head" denotes what kind of operation it is,
-    and "args" denotes the arguments needed for the operation. Other attributes, such as "symbol", is not
-    necessary as a Expr object but it is useful to create executable codes.
-    """
     n: int = 0
     
     # a map of how to conver expression into string.
@@ -40,7 +32,7 @@ class Expr:
         Head.setitem: lambda e: f"{e.args[0]}[{e.args[1]}] = {e.args[2]}",
         Head.delitem: lambda e: f"del {e.args[0]}[{e.args[1]}]",
         Head.call   : lambda e: f"{e.args[0]}({', '.join(map(str, e.args[1:]))})",
-        Head.assign : lambda e: f"{e.args[0]}={e.args[1]}",
+        Head.assign : lambda e: f"{e.args[0]} = {e.args[1]}",
         Head.value  : lambda e: str(e.args[0]),
         Head.assert_: lambda e: f"assert {e.args[0]}, {e.args[1]}".rstrip(", "),
         Head.comment: lambda e: f"# {e.args[0]}",
@@ -57,9 +49,9 @@ class Expr:
         self.__class__.n += 1
     
     def __repr__(self) -> str:
-        return self._repr()
+        return self.__class__._map[self.head](self)
     
-    def _repr(self, ind: int = 0) -> str:
+    def _dump(self, ind: int = 0) -> str:
         """
         Recursively expand expressions until it reaches value/assign expression.
         """
@@ -67,11 +59,8 @@ class Expr:
             return str(self)
         out = [f"head: {self.head.name}\n{' '*ind}args:\n"]
         for i, arg in enumerate(self.args):
-            out.append(f"{i:>{ind+2}}: {arg._repr(ind+4)}\n")
+            out.append(f"{i:>{ind+2}}: {arg._dump(ind+4)}\n")
         return "".join(out)
-    
-    def __str__(self) -> str:
-        return self.__class__._map[self.head](self)
     
     def __eq__(self, expr: Expr|Symbol) -> bool:
         if self.head != Head.value:
@@ -86,12 +75,15 @@ class Expr:
         else:
             raise ValueError(f"'==' is not supported between Expr and {type(expr)}")
     
+    def dump(self):
+        return self._dump()
+        
     def copy(self):
         return deepcopy(self)
     
     def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
-        _globals = {sym.data: v for sym, v in _globals.items()}
-        _locals = {sym.data: v for sym, v in _locals.items()}
+        _globals = {sym.name: v for sym, v in _globals.items()}
+        _locals = {sym.name: v for sym, v in _locals.items()}
         if self.head in (Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem):
             return exec(str(self), _globals, _locals)
         else:

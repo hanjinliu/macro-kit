@@ -207,20 +207,39 @@ class Macro(UserList):
         
         return newcls
             
-    def property(self, prop: Callable[[_O], Any]):
+    def property(self, prop: Callable[[_O], Any]) -> mProperty:
         """
         Make a macro-recordable property similar to ``@property``.
 
         Parameters
         ----------
-        prop : Callable[[_O], Any]
+        prop : callable
             Property getter function.
 
         Returns
         -------
-        MObject
+        mProperty
+            Macro-recordable property object.
         """
         return self.record(property(prop))
+    
+    def call_builtin(self, func: Callable, *args, **kwargs):
+        """
+        Call Python builtin function in macro recording mode.
+
+        Parameters
+        ----------
+        func : Callable
+            Builtin function.
+        """        
+        with self.blocked():
+            out = func(*args, **kwargs)
+        if self.active:
+            expr = Expr.parse_call(func, args, kwargs)
+            line = _assign_value_callback(expr, out)
+            self.append(line)
+            self._last_setval = None
+        return out
 
 class MacroMixin:
     pass

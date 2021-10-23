@@ -4,10 +4,10 @@ from importlib import import_module
 from functools import partial, wraps
 import inspect
 from collections import UserList
-from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar
+from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar, Hashable
 from types import ModuleType
 
-from .expression import Head, Expr, symbol, EXEC
+from .expression import Head, Expr, symbol, EXEC, check_format_mapping
 from .symbol import Symbol
 
 # types
@@ -58,11 +58,43 @@ class Macro(UserList):
         return "\n".join(map(repr, self))
     
     def dump(self) -> str:
+        """
+        Make a meta-code in Julian way.
+
+        Returns
+        -------
+        str
+            Meta-code.
+        """        
         return ",\n".join(expr.dump() for expr in self)
     
-    def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
+    def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}) -> Any:
+        """
+        Evaluate or execute macro as an Python script.
+        
+        Either ``eval`` or ``exec`` is called for every expressions, as determined by its
+        header. Calling this function is much safer than those not-recommended usage of 
+        ``eval`` or ``exec``.
+
+        Parameters
+        ----------
+        _globals : dict[Symbol, Any], optional
+            Mapping from global variable symbols to their values.
+        _locals : dict, optional
+            Updated variable namespace. Will be a mapping from symbols to values.
+
+        Returns
+        -------
+        Any
+            The last returned value.
+        """        
+        namespace = _globals.copy()
+        names = dict()
         for expr in self:
-            out = expr.eval(_globals, _locals)
+            namespace.update(names)
+            names = {}
+            out = expr.eval(namespace, names)
+        _locals.update({Symbol(k): v for k, v in namespace.items()})
         return out
     
     @contextmanager
@@ -76,44 +108,80 @@ class Macro(UserList):
         self.active = was_active
     
     @overload
-    def format(self, mapping: dict[Any, Symbol], inplace: bool = False) -> Macro:...
+    def format(self, mapping: dict[Hashable, Symbol|Expr], inplace: bool = False) -> Macro:...
         
     @overload
-    def format(self, mapping: Iterable[tuple[Any, Symbol]], inplace: bool = False) -> Macro:...
+    def format(self, mapping: Iterable[tuple[Any, Symbol|Expr]], inplace: bool = False) -> Macro:...
     
     def format(self, mapping, inplace: bool = False) -> Macro:
+        """
+        Format expressions in the macro.
+        
+        Just like format method of string, this function can replace certain symbols to
+        others. 
+
+        Parameters
+        ----------
+        mapping : dict or iterable of tuples
+            Mapping from objects to symbols or expressions. Keys will be converted to symbol.
+            For instance, if you used ``arr``, a numpy.ndarray as an input of an macro-recordable
+            function, that input will appear like 'var0x1...'. By calling ``format([(arr, "X")])``
+            then 'var0x1...' will be substituted to 'X'.
+        inplace : bool, default is False
+            Macro will be overwritten if true.
+
+        Returns
+        -------
+        Macro
+            Formatted macro.
+        """        
         if isinstance(mapping, dict):
             mapping = mapping.items()
             
-        m = {symbol(k): v for k, v in mapping}
+        m = check_format_mapping(mapping)
+        cls = self.__class__
         
-        return self.__class__(expr.format(m, inplace=inplace) for expr in self)
+        if inplace:
+            return cls(expr._unsafe_format(m) for expr in self)
+        else:
+            return cls(expr.copy()._unsafe_format(m) for expr in self)
     
     @overload
-    def record(self, obj: _property, *, returned_callback: MetaCallable = None) -> MProperty: ...
+    def record(self, obj: _property, *, returned_callback: MetaCallable = None) -> mProperty: ...
     
     @overload
-    def record(self, obj: ModuleType, *, returned_callback: MetaCallable = None) -> MModule: ...
+    def record(self, obj: ModuleType, *, returned_callback: MetaCallable = None) -> mModule: ...
     
     @overload
     def record(self, obj: type, *, returned_callback: MetaCallable = None) -> type[MacroMixin]: ...
     
     @overload
-    def record(self, obj: Callable, *, returned_callback: MetaCallable = None) -> MFunction: ...
+    def record(self, obj: Callable, *, returned_callback: MetaCallable = None) -> mFunction: ...
     
     @overload
-    def record(self, *, returned_callback: MetaCallable = None) -> Callable[[Recordable], MObject|MacroMixin]: ...
+    def record(self, *, returned_callback: MetaCallable = None) -> Callable[[Recordable], mObject|MacroMixin]: ...
     
     def record(self, obj = None, *, returned_callback = None):
+        """
+        A wrapper that convert an object to a macro-recordable one.
+
+        Parameters
+        ----------
+        obj : property, module, type or callable, optional
+            Base object.
+        returned_callback : callable, optional
+            A function that will called after new expression is appended. Must take an expression
+            or an expression with the last returned value as inputs.
+        """        
         def wrapper(_obj):
             if isinstance(_obj, property):
-                return MProperty(_obj, macro=self, returned_callback=returned_callback)
+                return mProperty(_obj, macro=self, returned_callback=returned_callback)
             elif inspect.ismodule(_obj):
-                return MModule(_obj, macro=self, returned_callback=returned_callback)
+                return mModule(_obj, macro=self, returned_callback=returned_callback)
             elif inspect.isclass(_obj) and _obj is not type:
                 return self.record_methods(_obj, returned_callback=returned_callback)
-            elif callable(_obj) and not isinstance(_obj, MObject):
-                return MFunction(_obj, macro=self, returned_callback=returned_callback)
+            elif callable(_obj) and not isinstance(_obj, mObject):
+                return mFunction(_obj, macro=self, returned_callback=returned_callback)
             else:
                 raise TypeError(f"Type {type(_obj)} is not macro recordable.")
         
@@ -156,12 +224,12 @@ class MacroMixin:
 def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
     new = Expr(Head.getattr, [namespace, symbol(obj)])
     for name, attr in inspect.getmembers(obj):
-        if isinstance(attr, MObject):
+        if isinstance(attr, mObject):
             attr.namespace = namespace
         elif isinstance(attr, MacroMixin):
             update_namespace(attr, new)
     
-class MObject:
+class mObject:
     obj: Any
     def __init__(self, obj: Any, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None) -> None:
@@ -188,9 +256,9 @@ class MObject:
         else:
             return Expr(Head.getattr, [self.namespace, symbol(obj)])
 
-Symbol.register_type(MObject, lambda o: symbol(o.obj))
+Symbol.register_type(mObject, lambda o: symbol(o.obj))
 
-class MFunction(MObject):
+class mFunction(mObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None):
@@ -296,7 +364,7 @@ class MFunction(MObject):
         else:
             return partial(self._method_type, obj)
         
-class MProperty(MObject, property):
+class mProperty(mObject, property):
     obj: property
     def __init__(self, prop: property, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None):
@@ -365,7 +433,7 @@ class MProperty(MObject, property):
     def __delete__(self, obj) -> None:
         return self.obj.__delete__(obj)
     
-class MModule(MObject):
+class mModule(mObject):
     obj: ModuleType
     def __getattr__(self, key: str):
         try:
@@ -379,7 +447,7 @@ class MModule(MObject):
                 raise ValueError(f"No function or submodule named '{key}'.")
         
         if _type == "module":
-            mmod = MModule(attr, self.macro, self.returned_callback, self.to_namespace(self.obj))
+            mmod = mModule(attr, self.macro, self.returned_callback, self.to_namespace(self.obj))
             setattr(self, key, mmod)
             return mmod
             

@@ -20,7 +20,8 @@ class Head(Enum):
     comment = "comment"
     assert_ = "assert_"
 
-EXEC = (Head.init, Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem)
+EXEC = (Head.init, Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, 
+        Head.delitem, Head.comment)
 
 class Expr:
     n: int = 0
@@ -80,9 +81,9 @@ class Expr:
     def copy(self):
         return deepcopy(self)
     
-    def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
-        _globals = {sym.name: v for sym, v in _globals.items()}
-        _locals = {sym.name: v for sym, v in _locals.items()}
+    def eval(self, _globals: dict[Symbol|str, Any] = {}, _locals: dict = {}):
+        _globals = {(sym.name if isinstance(sym, Symbol) else sym): v 
+                    for sym, v in _globals.items()}
         if self.head in EXEC:
             return exec(str(self), _globals, _locals)
         else:
@@ -168,18 +169,34 @@ class Expr:
         if not yielded:
             yield self
     
-    def format(self, mapping: dict[Symbol, Symbol], inplace: bool = False) -> Expr:
+    def format(self, mapping: dict[Symbol, Symbol|Expr], inplace: bool = False) -> Expr:
+        mapping = check_format_mapping(mapping.items())
+            
         if not inplace:
             self = self.copy()
             
-        for arg in self.iter_args():
-            try:
-                new = mapping[arg]
-            except KeyError:
-                pass
+        return self._unsafe_format(mapping)
+    
+    def _unsafe_format(self, mapping: dict[Symbol, Symbol|Expr]) -> Expr:
+        for i, arg in enumerate(self.args):
+            if isinstance(arg, Expr):
+                arg._unsafe_format(mapping)
             else:
-                arg.replace(new)
+                try:
+                    new = mapping[arg]
+                except KeyError:
+                    pass
+                else:
+                    self.args[i] = new
         return self
+
+def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol, Symbol|Expr]:
+    _dict = {}
+    for k, v in mapping_list:
+        if isinstance(v, Expr) and v.head in EXEC:
+            raise ValueError("Cannot replace a symbol to a non-evaluable expression.")
+        _dict[symbol(k)] = v
+    return _dict
 
 
 def make_symbol_str(obj: Any):

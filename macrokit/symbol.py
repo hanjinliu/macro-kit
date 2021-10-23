@@ -8,7 +8,6 @@ from types import FunctionType, BuiltinFunctionType, ModuleType
 T = TypeVar("T")
 
 class Symbol:
-    
     # Map of how to convert object into a symbol.
     _type_map: dict[type, Callable[[Any], str]] = {
         type: lambda e: e.__name__,
@@ -20,6 +19,7 @@ class Symbol:
         type(None): lambda e: "None",
     }
     
+    # ID of global variables
     _variables: set[int] = set()
     
     def __init__(self, seq: str, object_id: int = None, type: type = Any):
@@ -58,13 +58,20 @@ class Symbol:
                                  default=default,
                                  annotation=self.type)
     
+    def replace(self, other: Symbol) -> None:
+        self.name = other.name
+        self.object_id = other.object_id
+        self.type = other.type
+        self.valid = other.valid
+        return None
+    
     @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], str]):
+    def register_type(cls, type: type[T], function: Callable[[T], str|Symbol]):
         if not callable(function):
             raise TypeError("The second argument must be callable.")
         cls._type_map[type] = function
         
 
-def register_type(type: type[T], function: Callable[[T], str]):
+def register_type(type: type[T], function: Callable[[T], str|Symbol]):
     return Symbol.register_type(type, function)
         

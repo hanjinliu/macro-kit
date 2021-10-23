@@ -7,7 +7,7 @@ from collections import UserList
 from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar
 from types import ModuleType
 
-from .expression import Head, Expr, symbol, make_symbol_str, EXEC
+from .expression import Head, Expr, symbol, EXEC
 from .symbol import Symbol
 
 # types
@@ -74,18 +74,16 @@ class Macro(UserList):
         self.active = was_active
     
     @overload
-    def format(self, mapping: dict[Symbol|Any, Symbol|Expr], inplace: bool = False) -> Macro:...
+    def format(self, mapping: dict[Any, Symbol], inplace: bool = False) -> Macro:...
         
     @overload
-    def format(self, mapping: Iterable[tuple[Symbol|Any, Symbol|Expr]], inplace: bool = False) -> Macro:...
+    def format(self, mapping: Iterable[tuple[Any, Symbol]], inplace: bool = False) -> Macro:...
     
     def format(self, mapping, inplace: bool = False) -> Macro:
         if isinstance(mapping, dict):
-            it = dict.items()
-        else:
-            it = mapping
+            mapping = mapping.items()
             
-        m = {Symbol(k): v for k, v in it}
+        m = {symbol(k): v for k, v in mapping}
         
         return self.__class__(expr.format(m, inplace=inplace) for expr in self)
     
@@ -187,7 +185,9 @@ class MObject:
             return symbol(obj)
         else:
             return Expr(Head.getattr, [self.namespace, symbol(obj)])
-            
+
+Symbol.register_type(MObject, lambda o: symbol(o.obj))
+
 class MFunction(MObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
@@ -207,6 +207,7 @@ class MFunction(MObject):
             out = self.obj(*args, **kwargs)
         if self.macro.active:
             expr = Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
+            expr = assign_callback(expr, out)
             line = self.returned_callback(expr, out)
             self.macro.append(line)
             self._last_setval = None
@@ -222,6 +223,7 @@ class MFunction(MObject):
         elif fname == "__call__":
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_call(self.to_namespace(obj), args, kwargs)
+                expr = assign_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__getitem__":
@@ -265,6 +267,7 @@ class MFunction(MObject):
         else:
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_method(self.to_namespace(obj), self.obj, args, kwargs)
+                expr = assign_callback(expr, out)
                 self._last_setval = None
                 return expr
         
@@ -283,7 +286,7 @@ class MFunction(MObject):
         
     def __get__(self, obj: _O, objtype=None):
         """
-        Return a method type function that ``obj`` is bound. This subscriptor enables
+        Return a method type function that ``obj`` is bound. This discriptor enables
         creating macro recordable instance methods.
         """
         if obj is None:
@@ -321,10 +324,10 @@ class MProperty(MObject, property):
                 out = fset(obj, value)
             if self.macro.active:
                 expr = Expr(Head.setattr, [self.to_namespace(obj), key, value])
-                if self._last_setval == (Head.setitem, key.name):
+                if self._last_setval == (Head.setattr, key.name):
                     self.macro.pop(-1)
                 else:
-                    self._last_setval = (Head.setitem, key.name)
+                    self._last_setval = (Head.setattr, key.name)
                 
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
@@ -364,27 +367,31 @@ class MModule(MObject):
     obj: ModuleType
     def __getattr__(self, key: str):
         try:
-            func = getattr(self.obj, key)
+            attr = getattr(self.obj, key)
+            _type = "module" if inspect.ismodule(attr) else "function"
         except AttributeError:
             try:
-                submod = import_module("." + key, self.obj.__name__)
-                mmod = MModule(submod, self.macro, self.returned_callback, self.to_namespace(self.obj))
+                attr = import_module("." + key, self.obj.__name__)
+                _type = "module"
             except ModuleNotFoundError:
                 raise ValueError(f"No function or submodule named '{key}'.")
-            else:
-                setattr(self, key, mmod)
-            return mmod
         
-        @wraps(func)
+        if _type == "module":
+            mmod = MModule(attr, self.macro, self.returned_callback, self.to_namespace(self.obj))
+            setattr(self, key, mmod)
+            return mmod
+            
+        @wraps(attr)
         def mfunc(*args, **kwargs):
             with self.macro.blocked():
-                out = func(*args, **kwargs)
+                out = attr(*args, **kwargs)
             if self.macro.active:
-                if isinstance(func, type):
+                if isinstance(attr, type):
                     cls = Expr(Head.getattr, [self.to_namespace(self.obj), Symbol(out.__class__.__name__)])
                     expr = Expr.parse_init(out, cls, args, kwargs)    
                 else:
-                    expr = Expr.parse_method(self.to_namespace(self.obj), func, args, kwargs)
+                    expr = Expr.parse_method(self.to_namespace(self.obj), attr, args, kwargs)
+                    expr = assign_callback(expr, out)
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
                 self._last_setval = None
@@ -394,8 +401,8 @@ class MModule(MObject):
 
 def assign_callback(expr: Expr, out: Any):
     out_sym = symbol(out, valid=False)
-    if expr.head in EXEC:
-        expr_assign = expr
+    if expr.head not in EXEC:
+        expr_assign = Expr(Head.assign, [out_sym, expr])
     else:
-        expr_assign = Expr("assign", [out_sym, expr])
+        expr_assign = expr        
     return expr_assign

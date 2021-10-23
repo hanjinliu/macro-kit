@@ -15,7 +15,7 @@ class Head(Enum):
     delitem = "delitem"
     call    = "call"
     assign  = "assign"
-    value   = "value"
+    kw      = "kw"
     comment = "comment"
     assert_ = "assert_"
 
@@ -35,17 +35,14 @@ class Expr:
         Head.delitem: lambda e: f"del {e.args[0]}[{e.args[1]}]",
         Head.call   : lambda e: f"{e.args[0]}({', '.join(map(str, e.args[1:]))})",
         Head.assign : lambda e: f"{e.args[0]} = {e.args[1]}",
-        Head.value  : lambda e: str(e.args[0]),
+        Head.kw     : lambda e: f"{e.args[0]}={e.args[1]}",
         Head.assert_: lambda e: f"assert {e.args[0]}, {e.args[1]}".rstrip(", "),
         Head.comment: lambda e: f"# {e.args[0]}",
     }
     
     def __init__(self, head: Head, args: Iterable[Any]):
         self.head = Head(head)
-        if head == Head.value:
-            self.args = [args[0]]
-        else:
-            self.args = list(map(self.__class__.parse, args))
+        self.args = list(map(self.__class__.parse, args))
             
         self.number = self.__class__.n
         self.__class__.n += 1
@@ -54,27 +51,25 @@ class Expr:
         return self.__class__._map[self.head](self)
     
     def __eq__(self, expr: Expr|Symbol) -> bool:
-        if self.head != Head.value:
-            if isinstance(expr, self.__class__) and self.head == expr.head:
+        if isinstance(expr, self.__class__):
+            if self.head == expr.head:
                 return self.args == expr.args
             else:
                 return False
-        elif isinstance(expr, Symbol):
-            return self.args[0] == expr
-        elif isinstance(expr, self.__class__):
-            return self.args[0] == expr.args[0]
         else:
             raise ValueError(f"'==' is not supported between Expr and {type(expr)}")
     
     def _dump(self, ind: int = 0) -> str:
         """
-        Recursively expand expressions until it reaches value/assign expression.
+        Recursively expand expressions until it reaches value/kw expression.
         """
-        if self.head in (Head.value, Head.assign):
-            return str(self)
         out = [f"head: {self.head.name}\n{' '*ind}args:\n"]
         for i, arg in enumerate(self.args):
-            out.append(f"{i:>{ind+2}}: {arg._dump(ind+4)}\n")
+            if isinstance(arg, Symbol):
+                value = arg
+            else:
+                value = arg._dump(ind+4)
+            out.append(f"{i:>{ind+2}}: {value}\n")
         return "".join(out)
     
     def dump(self):
@@ -138,12 +133,12 @@ class Expr:
             inputs.append(a)
                 
         for k, v in kwargs.items():
-            inputs.append(cls(Head.assign, [Symbol(k), v]))
+            inputs.append(cls(Head.kw, [Symbol(k), v]))
         return inputs
     
     @classmethod
     def parse(cls, a: Any) -> Expr:
-        return a if isinstance(a, cls) else cls(Head.value, [symbol(a)])
+        return a if isinstance(a, cls) else symbol(a)
     
     def iter_args(self) -> Iterator[Symbol]:
         """
@@ -156,19 +151,7 @@ class Expr:
                 yield arg
             else:
                 raise RuntimeError(arg)
-    
-    def iter_values(self) -> Iterator[Expr]:
-        """
-        Recursively iterate along all the values.
-        """
-        for arg in self.args:
-            if isinstance(arg, self.__class__):
-                if arg.head == Head.value:
-                    yield arg
-                else:
-                    yield from arg.iter_values()
-    
-    
+        
     def iter_expr(self) -> Iterator[Expr]:
         """
         Recursively iterate over all the nested Expr, until it reached to non-nested Expr.
@@ -183,17 +166,17 @@ class Expr:
         if not yielded:
             yield self
     
-    def format(self, mapping: dict[Symbol, Symbol|Expr], inplace: bool = False) -> Expr:
+    def format(self, mapping: dict[Symbol, Symbol], inplace: bool = False) -> Expr:
         if not inplace:
             self = self.copy()
             
-        for arg in self.iter_values():
+        for arg in self.iter_args():
             try:
-                new = mapping[arg.args[0]]
+                new = mapping[arg]
             except KeyError:
                 pass
             else:
-                arg.args[0] = new
+                arg.replace(new)
         return self
 
 
@@ -204,6 +187,24 @@ def make_symbol_str(obj: Any):
     return f"var{hex(_id)}"
 
 def symbol(obj: Any, valid: bool = True) -> Symbol:
+    """
+    Make a proper Symbol instance from any objects.
+    
+    Unlike Symbol(...) constructor, which directly make a Symbol from a string, this function
+    checks input type and determine the optimal string to represent the object. Especially,
+    Symbol("xyz") will return ``:xyz`` while symbol("xyz") will return ``:'xyz'``.
+
+    Parameters
+    ----------
+    obj : Any
+        Any object from which a Symbol will be created.
+    valid : bool, default is True
+        If false, object identifier will be named by its ID.
+
+    Returns
+    -------
+    Symbol
+    """    
     if isinstance(obj, (Symbol, Expr)):
         return obj
         
@@ -243,7 +244,11 @@ def symbol(obj: Any, valid: bool = True) -> Symbol:
         else:
             seq = make_symbol_str(obj)
             valid = False
-            
-    sym = Symbol(seq, id(obj), type(obj))
-    sym.valid = valid
+    
+    if isinstance(seq, Symbol):
+        # The output of register_type can be a Symbol
+        sym = seq
+    else:
+        sym = Symbol(seq, id(obj), type(obj))
+        sym.valid = valid
     return sym

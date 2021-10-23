@@ -1,8 +1,8 @@
 # macro-kit
 
-`macro-kit` is a package for efficient macro recording and metaprogramming in Python using abstract symtax tree (AST).
+`macro-kit` is a package for efficient macro recording and metaprogramming in Python using abstract syntax tree (AST).
 
-AST design in this package is strongly inspired by [Julia metaprogramming](https://docs.julialang.org/en/v1/manual/metaprogramming/). Similar methods are also implemented in `ast` module but this module is more focused on the macro generation and customization.
+The design of AST in this package is strongly inspired by [Julia metaprogramming](https://docs.julialang.org/en/v1/manual/metaprogramming/). Similar methods are also implemented in builtin `ast` module but `macro-kit` is more focused on the macro generation and customization.
 
 
 ## Installation
@@ -13,7 +13,7 @@ pip install git+https://github.com/hanjinliu/macro-kit
 
 ## Examples
 
-1. Define a macro-recordable function and 
+1. Define a macro-recordable function
 
 ```python
 from macrokit import Macro, Expr, Symbol

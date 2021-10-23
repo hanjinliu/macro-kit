@@ -63,7 +63,7 @@ macro = Macro()
 @macro.record
 class C:
     def __init__(self, val: int):
-        self._value = val
+        self.value = val
     
     @property
     def value(self):
@@ -93,11 +93,11 @@ macro.format([(c, "ins")])
 ```
 [Out]
 ins = C(1)
-ins.value = -10
+ins.value = -10     # setattr (and setitem) will not be recorded in duplicate
 var0x7ffed09d2cd8 = ins.show()
 ```
 ```python
-macro.eval({"C": C}) # safer than builtin eval function
+macro.eval({"C": C})
 ```
 ```
 -10

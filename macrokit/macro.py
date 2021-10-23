@@ -90,10 +90,11 @@ class Macro(UserList):
         """        
         namespace = _globals.copy()
         names = dict()
-        for expr in self:
-            namespace.update(names)
-            names = {}
-            out = expr.eval(namespace, names)
+        with self.blocked():
+            for expr in self:
+                namespace.update(names)
+                names = {}
+                out = expr.eval(namespace, names)
         _locals.update({Symbol(k): v for k, v in namespace.items()})
         return out
     
@@ -104,8 +105,10 @@ class Macro(UserList):
         """        
         was_active = self.active
         self.active = False
-        yield
-        self.active = was_active
+        try:
+            yield
+        finally:
+            self.active = was_active
     
     @overload
     def format(self, mapping: dict[Hashable, Symbol|Expr], inplace: bool = False) -> Macro:...

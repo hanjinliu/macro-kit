@@ -195,7 +195,16 @@ def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol
     for k, v in mapping_list:
         if isinstance(v, Expr) and v.head in EXEC:
             raise ValueError("Cannot replace a symbol to a non-evaluable expression.")
-        _dict[symbol(k)] = v
+        sym = symbol(k)
+        if sym.constant:
+            _dict[sym] = v
+        else:
+            if isinstance(v, str):
+                _dict[sym] = Symbol(v)
+            elif isinstance(v, (Symbol, Expr)):
+                _dict[sym] = v
+            else:
+                raise TypeError(f"Cannot use {type(v)} for formatting a variable.")
     return _dict
 
 

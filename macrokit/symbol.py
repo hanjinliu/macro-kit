@@ -26,7 +26,7 @@ class Symbol:
         self.name = str(seq)
         self.object_id = object_id or id(seq)
         self.type = type
-        self.valid = True
+        self.constant = True
     
     @property
     def name(self):
@@ -62,7 +62,7 @@ class Symbol:
         self.name = other.name
         self.object_id = other.object_id
         self.type = other.type
-        self.valid = other.valid
+        self.constant = other.constant
         return None
     
     @classmethod

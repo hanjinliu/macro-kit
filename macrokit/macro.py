@@ -400,7 +400,7 @@ class MModule(MObject):
     
 
 def assign_callback(expr: Expr, out: Any):
-    out_sym = symbol(out, valid=False)
+    out_sym = symbol(out, constant=False)
     if expr.head not in EXEC:
         expr_assign = Expr(Head.assign, [out_sym, expr])
     else:

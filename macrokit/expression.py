@@ -186,7 +186,7 @@ def make_symbol_str(obj: Any):
     Symbol._variables.add(_id)
     return f"var{hex(_id)}"
 
-def symbol(obj: Any, valid: bool = True) -> Symbol:
+def symbol(obj: Any, constant: bool = True) -> Symbol:
     """
     Make a proper Symbol instance from any objects.
     
@@ -198,8 +198,9 @@ def symbol(obj: Any, valid: bool = True) -> Symbol:
     ----------
     obj : Any
         Any object from which a Symbol will be created.
-    valid : bool, default is True
-        If false, object identifier will be named by its ID.
+    constant : bool, default is True
+        If true, object is interpreted as a constant like 1 or "a". Otherwise object is converted
+        to a variable that named with its ID.
 
     Returns
     -------
@@ -209,9 +210,9 @@ def symbol(obj: Any, valid: bool = True) -> Symbol:
         return obj
         
     objtype = type(obj)
-    if not valid or id(obj) in Symbol._variables:
+    if not constant or id(obj) in Symbol._variables:
         seq = make_symbol_str(obj)
-        valid = False
+        constant = False
     elif isinstance(obj, str):
         seq = repr(obj)
     elif isinstance(obj, Number): # int, float, bool, ...
@@ -243,12 +244,12 @@ def symbol(obj: Any, valid: bool = True) -> Symbol:
                 break
         else:
             seq = make_symbol_str(obj)
-            valid = False
+            constant = False
     
     if isinstance(seq, Symbol):
         # The output of register_type can be a Symbol
         sym = seq
     else:
         sym = Symbol(seq, id(obj), type(obj))
-        sym.valid = valid
+        sym.constant = constant
     return sym

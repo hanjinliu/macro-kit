@@ -140,7 +140,7 @@ class Expr:
         return inputs
     
     @classmethod
-    def parse(cls, a: Any) -> Expr:
+    def parse(cls, a: Any) -> Symbol | Expr:
         return a if isinstance(a, cls) else symbol(a)
     
     def iter_args(self) -> Iterator[Symbol]:

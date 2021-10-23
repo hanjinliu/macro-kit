@@ -107,5 +107,34 @@ macro.eval({"C": C}) # safer than builtin eval function
 
 ```python
 import numpy as np
+macro = Macro()
+np = macro.record(np) # macro-recordable numpy
 
+arr = np.random.random(30)
+mean = np.mean(arr)
+
+macro
+```
+```
+var0x2a0a2864090 = numpy.random.random(30)
+var0x2a0a40daef0 = numpy.mean(var0x2a0a2864090)
+```
+```python
+from dask import array as da
+dask_macro = macro.format([(np, "da")])
+dask_macro
+```
+```
+var0x2a0a2864090 = da.random.random(30)
+var0x2a0a40daef0 = da.mean(var0x2a0a2864090)
+```
+```python
+output = {}
+dask_macro.eval({"da": da}, output)
+output
+```
+```
+{:da: <module 'dask.array' from 'C:\\...\\__init__.py'>,
+ :var0x2a0a2864090: dask.array<random_sample, shape=(30,), dtype=float64, chunksize=(30,), chunktype=numpy.ndarray>,
+ :var0x2a0a40daef0: dask.array<mean_agg-aggregate, shape=(), dtype=float64, chunksize=(), chunktype=numpy.ndarray>}
 ```

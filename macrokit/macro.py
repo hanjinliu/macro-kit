@@ -95,6 +95,7 @@ class Macro(UserList):
                 namespace.update(names)
                 names = {}
                 out = expr.eval(namespace, names)
+            namespace.update(names)
         _locals.update({Symbol(k): v for k, v in namespace.items()})
         return out
     

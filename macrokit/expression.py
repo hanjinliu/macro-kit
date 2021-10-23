@@ -14,6 +14,7 @@ class Head(Enum):
     setitem = "setitem"
     delitem = "delitem"
     call    = "call"
+    len     = "len"
     assign  = "assign"
     kw      = "kw"
     comment = "comment"
@@ -34,6 +35,7 @@ class Expr:
         Head.setitem: lambda e: f"{e.args[0]}[{e.args[1]}] = {e.args[2]}",
         Head.delitem: lambda e: f"del {e.args[0]}[{e.args[1]}]",
         Head.call   : lambda e: f"{e.args[0]}({', '.join(map(str, e.args[1:]))})",
+        Head.len    : lambda e: f"len({e.args[0]})",
         Head.assign : lambda e: f"{e.args[0]} = {e.args[1]}",
         Head.kw     : lambda e: f"{e.args[0]}={e.args[1]}",
         Head.assert_: lambda e: f"assert {e.args[0]}, {e.args[1]}".rstrip(", "),

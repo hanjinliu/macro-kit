@@ -19,6 +19,8 @@ _O = TypeVar("_O")
 _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__dir__", 
                    "__init_subclass__", "__subclasshook__")
 
+_INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotations__")
+
 class Macro(UserList):
     """
     List of expressions. A Macro object corresponds to a Python script.
@@ -129,7 +131,7 @@ class Macro(UserList):
                 update_namespace(attr)
                 _dict[name] = attr
         
-        newcls = type(cls.__name__, (MacroMixin,) + cls.__bases__, _dict)
+        newcls = type(cls.__name__, (MacroMixin, cls), _dict)
         
         return newcls
             
@@ -174,7 +176,7 @@ class MObject:
             raise TypeError("returned_callback cannot take arguments more than two.")
         
         self.macro: Macro = macro
-        for name in ["__name__", "__doc__"]:
+        for name in _INHERITABLE:
             if hasattr(self.obj, name):
                 setattr(self, name, getattr(self.obj, name))
         
@@ -207,14 +209,14 @@ class MFunction(MObject):
             out = self.obj(*args, **kwargs)
         if self.macro.active:
             expr = Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
-            expr = assign_callback(expr, out)
+            expr = _assign_value_callback(expr, out)
             line = self.returned_callback(expr, out)
             self.macro.append(line)
             self._last_setval = None
         return out
     
     def _make_method_type(self):
-        fname = self.obj.__name__
+        fname = getattr(self.obj, "__name__", None)
         if fname == "__init__":
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_init(self.to_namespace(obj), obj.__class__, args, kwargs)
@@ -223,19 +225,19 @@ class MFunction(MObject):
         elif fname == "__call__":
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_call(self.to_namespace(obj), args, kwargs)
-                expr = assign_callback(expr, out)
+                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__getitem__":
             def make_expr(obj: _O, out, *args):
                 expr = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
-                expr = assign_callback(expr, out)
+                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__getattr__":
             def make_expr(obj: _O, out, *args):
                 expr = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
-                expr = assign_callback(expr, out)
+                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__setitem__":
@@ -267,7 +269,7 @@ class MFunction(MObject):
         else:
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_method(self.to_namespace(obj), self.obj, args, kwargs)
-                expr = assign_callback(expr, out)
+                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         
@@ -309,7 +311,7 @@ class MProperty(MObject, property):
                 out = fget(obj)
             if self.macro.active:
                 expr = Expr(Head.getattr, [self.to_namespace(obj), key])
-                expr = assign_callback(expr, out)
+                expr = _assign_value_callback(expr, out)
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
                 self._last_setval = None
@@ -391,7 +393,7 @@ class MModule(MObject):
                     expr = Expr.parse_init(out, cls, args, kwargs)    
                 else:
                     expr = Expr.parse_method(self.to_namespace(self.obj), attr, args, kwargs)
-                    expr = assign_callback(expr, out)
+                    expr = _assign_value_callback(expr, out)
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
                 self._last_setval = None
@@ -399,7 +401,7 @@ class MModule(MObject):
         return mfunc
     
 
-def assign_callback(expr: Expr, out: Any):
+def _assign_value_callback(expr: Expr, out: Any):
     out_sym = symbol(out, constant=False)
     if expr.head not in EXEC:
         expr_assign = Expr(Head.assign, [out_sym, expr])

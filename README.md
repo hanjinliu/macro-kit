@@ -7,6 +7,14 @@ The design of AST in this package is strongly inspired by [Julia metaprogramming
 
 ## Installation
 
+- use pip
+
+```
+pip install macro-kit
+```
+
+- from source
+
 ```
 pip install git+https://github.com/hanjinliu/macro-kit
 ```
@@ -100,6 +108,7 @@ var0x7ffed09d2cd8 = ins.show()
 macro.eval({"C": C})
 ```
 ```
+[Out]
 -10
 ```
 
@@ -116,6 +125,7 @@ mean = np.mean(arr)
 macro
 ```
 ```
+[Out]
 var0x2a0a2864090 = numpy.random.random(30)
 var0x2a0a40daef0 = numpy.mean(var0x2a0a2864090)
 ```
@@ -125,6 +135,7 @@ dask_macro = macro.format([(np, "da")])
 dask_macro
 ```
 ```
+[Out]
 var0x2a0a2864090 = da.random.random(30)
 var0x2a0a40daef0 = da.mean(var0x2a0a2864090)
 ```
@@ -134,6 +145,7 @@ dask_macro.eval({"da": da}, output)
 output
 ```
 ```
+[Out]
 {:da: <module 'dask.array' from 'C:\\...\\__init__.py'>,
  :var0x2a0a2864090: dask.array<random_sample, shape=(30,), dtype=float64, chunksize=(30,), chunktype=numpy.ndarray>,
  :var0x2a0a40daef0: dask.array<mean_agg-aggregate, shape=(), dtype=float64, chunksize=(), chunktype=numpy.ndarray>}

@@ -13,6 +13,7 @@ from .symbol import Symbol
 # types
 MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
 Recordable = Union[property, Callable, type, ModuleType]
+_property = property
 _O = TypeVar("_O")
 
 _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__dir__", 
@@ -20,7 +21,7 @@ _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__di
 
 class Macro(UserList):
     """
-    List with pretty output customized for macro.
+    List of expressions. A Macro object corresponds to a Python script.
     """    
     def __init__(self, iterable: Iterable = (), *, active: bool = True):
         super().__init__(iterable)
@@ -87,12 +88,23 @@ class Macro(UserList):
         m = {Symbol(k): v for k, v in it}
         
         return self.__class__(expr.format(m, inplace=inplace) for expr in self)
-        
-    def record(self, 
-               obj: Recordable = None, 
-               *, 
-               returned_callback: MetaCallable = None
-               ):
+    
+    @overload
+    def record(self, obj: _property, *, returned_callback: MetaCallable = None) -> MProperty: ...
+    
+    @overload
+    def record(self, obj: ModuleType, *, returned_callback: MetaCallable = None) -> MModule: ...
+    
+    @overload
+    def record(self, obj: type, *, returned_callback: MetaCallable = None) -> type[MacroMixin]: ...
+    
+    @overload
+    def record(self, obj: Callable, *, returned_callback: MetaCallable = None) -> MFunction: ...
+    
+    @overload
+    def record(self, *, returned_callback: MetaCallable = None) -> Callable[[Recordable], MObject|MacroMixin]: ...
+    
+    def record(self, obj = None, *, returned_callback = None):
         def wrapper(_obj):
             if isinstance(_obj, property):
                 return MProperty(_obj, macro=self, returned_callback=returned_callback)
@@ -258,7 +270,6 @@ class MFunction(MObject):
         
         @wraps(self.obj)
         def method(obj: _O, *args, **kwargs):
-            # TODO: need namespace?
             with self.macro.blocked():
                 out = self.obj(obj, *args, **kwargs)
             if self.macro.active:
@@ -280,12 +291,12 @@ class MFunction(MObject):
         else:
             return partial(self._method_type, obj)
         
-class MProperty(MObject):
+class MProperty(MObject, property):
     obj: property
     def __init__(self, prop: property, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None):
         super().__init__(prop, macro, returned_callback, namespace)
-        self.getter(prop.fget)
+        self.obj = self.getter(prop.fget)
     
     def getter(self, fget: Callable[[_O], None]):
         key = Symbol(fget.__name__)
@@ -337,12 +348,18 @@ class MProperty(MObject):
         
         return self.obj.deleter(deleter)
     
-    def __get__(self, obj: _O, objtype=None):
+    def __get__(self, obj: _O, type=None):
         if obj is None:
             return self.obj
         else:
             return self.obj.__get__(obj)
-
+        
+    def __set__(self, obj, value) -> None:
+        return self.obj.__set__(obj, value)
+    
+    def __delete__(self, obj) -> None:
+        return self.obj.__delete__(obj)
+    
 class MModule(MObject):
     obj: ModuleType
     def __getattr__(self, key: str):
@@ -376,11 +393,9 @@ class MModule(MObject):
     
 
 def assign_callback(expr: Expr, out: Any):
-    out_sym = symbol(out)
+    out_sym = symbol(out, valid=False)
     if expr.head in EXEC:
         expr_assign = expr
-    elif out_sym.valid:
-        expr_assign = Expr("assign", [Symbol(make_symbol_str(out)), expr])
     else:
         expr_assign = Expr("assign", [out_sym, expr])
     return expr_assign

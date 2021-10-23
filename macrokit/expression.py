@@ -198,15 +198,20 @@ class Expr:
 
 
 def make_symbol_str(obj: Any):
-    return f"var{hex(id(obj))}"
+    # hexadecimals are easier to distinguish
+    _id = id(obj)
+    Symbol._variables.add(_id)
+    return f"var{hex(_id)}"
 
-def symbol(obj: Any) -> Symbol:
+def symbol(obj: Any, valid: bool = True) -> Symbol:
     if isinstance(obj, (Symbol, Expr)):
         return obj
-    
-    valid = True
+        
     objtype = type(obj)
-    if isinstance(obj, str):
+    if not valid or id(obj) in Symbol._variables:
+        seq = make_symbol_str(obj)
+        valid = False
+    elif isinstance(obj, str):
         seq = repr(obj)
     elif isinstance(obj, Number): # int, float, bool, ...
         seq = obj
@@ -236,7 +241,7 @@ def symbol(obj: Any) -> Symbol:
                 seq = func(obj)
                 break
         else:
-            seq = make_symbol_str(obj) # hexadecimals are easier to distinguish
+            seq = make_symbol_str(obj)
             valid = False
             
     sym = Symbol(seq, id(obj), type(obj))

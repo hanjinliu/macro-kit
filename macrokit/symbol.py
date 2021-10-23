@@ -20,6 +20,8 @@ class Symbol:
         type(None): lambda e: "None",
     }
     
+    _variables: set[int] = set()
+    
     def __init__(self, seq: str, object_id: int = None, type: type = Any):
         self.name = str(seq)
         self.object_id = object_id or id(seq)

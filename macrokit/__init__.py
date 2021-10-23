@@ -7,7 +7,7 @@ from functools import wraps
 
 __all__ = ["Symbol", "Head", "Expr", "Macro",
            "symbol", "register_type",
-           "blocked", "record", "property", "get_macro"
+           "blocked", "record", "property", "dump", "get_macro"
            ]
 
 _MACRO = Macro()

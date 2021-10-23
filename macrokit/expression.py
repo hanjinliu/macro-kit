@@ -19,7 +19,7 @@ class Head(Enum):
     comment = "comment"
     assert_ = "assert_"
 
-_EXEC = (Head.init, Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem)
+EXEC = (Head.init, Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, Head.delitem)
 
 class Expr:
     n: int = 0
@@ -53,17 +53,6 @@ class Expr:
     def __repr__(self) -> str:
         return self.__class__._map[self.head](self)
     
-    def _dump(self, ind: int = 0) -> str:
-        """
-        Recursively expand expressions until it reaches value/assign expression.
-        """
-        if self.head in (Head.value, Head.assign):
-            return str(self)
-        out = [f"head: {self.head.name}\n{' '*ind}args:\n"]
-        for i, arg in enumerate(self.args):
-            out.append(f"{i:>{ind+2}}: {arg._dump(ind+4)}\n")
-        return "".join(out)
-    
     def __eq__(self, expr: Expr|Symbol) -> bool:
         if self.head != Head.value:
             if isinstance(expr, self.__class__) and self.head == expr.head:
@@ -77,6 +66,17 @@ class Expr:
         else:
             raise ValueError(f"'==' is not supported between Expr and {type(expr)}")
     
+    def _dump(self, ind: int = 0) -> str:
+        """
+        Recursively expand expressions until it reaches value/assign expression.
+        """
+        if self.head in (Head.value, Head.assign):
+            return str(self)
+        out = [f"head: {self.head.name}\n{' '*ind}args:\n"]
+        for i, arg in enumerate(self.args):
+            out.append(f"{i:>{ind+2}}: {arg._dump(ind+4)}\n")
+        return "".join(out)
+    
     def dump(self):
         return self._dump()
         
@@ -86,7 +86,7 @@ class Expr:
     def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}):
         _globals = {sym.name: v for sym, v in _globals.items()}
         _locals = {sym.name: v for sym, v in _locals.items()}
-        if self.head in _EXEC:
+        if self.head in EXEC:
             return exec(str(self), _globals, _locals)
         else:
             return eval(str(self), _globals, _locals)

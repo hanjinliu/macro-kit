@@ -34,8 +34,6 @@ class Symbol:
     def name(self, newname: str):
         if not isinstance(newname, str):
             raise TypeError(f"Cannot set non-string to name: {newname!r}.")
-        # elif not newname.isidentifier():
-        #     raise ValueError(f"Cannot set non-identifier to name: {newname!r}.")
         self._name = newname
     
     def __repr__(self) -> str:

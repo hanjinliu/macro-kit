@@ -160,3 +160,35 @@ output
  :var0x2a0a2864090: dask.array<random_sample, shape=(30,), dtype=float64, chunksize=(30,), chunktype=numpy.ndarray>,
  :var0x2a0a40daef0: dask.array<mean_agg-aggregate, shape=(), dtype=float64, chunksize=(), chunktype=numpy.ndarray>}
 ```
+
+4. String parsing
+
+`parse` calls `ast.parse` inside so that you can safely make `Expr` from string.
+
+```python
+from macrokit import parse
+
+expr = parse("result = f(0, l[2:8])")
+expr
+```
+```
+[Out]
+:(result = f(0, l[slice(2, 8, None)])
+```
+```python
+print(expr.dump())
+```
+```
+[Out]
+head: assign
+args:
+ 0: result
+ 1: head: call
+    args:
+     0: f
+     1: 0
+     2: head: getitem
+        args:
+         0: l
+         1: slice(2, 8, None)
+```

@@ -1,8 +1,9 @@
 __version__ = "0.2.0dev0"
 
 from .symbol import Symbol, register_type
-from .expression import Expr, Head, symbol, parse
+from .expression import Expr, Head, symbol
 from .macro import Macro
+from .ast import parse
 from functools import wraps
 
 __all__ = ["Symbol", "Head", "Expr", "Macro",

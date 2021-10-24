@@ -8,7 +8,7 @@ from collections import UserList
 from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar, Hashable
 from types import ModuleType
 
-from .expression import Head, Expr, symbol, EXEC, check_format_mapping
+from .expression import BINOP_MAP, Head, Expr, symbol, EXEC, check_format_mapping
 from .symbol import Symbol
 
 # types
@@ -400,6 +400,12 @@ class mFunction(mObject):
             def make_expr(obj: _O, out, *args):
                 target = Expr(Head.getattr, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.del_, [target])
+                self._last_setval = None
+                return expr
+        elif fname in BINOP_MAP.keys():
+            op = BINOP_MAP[fname]
+            def make_expr(obj: _O, out, *args):
+                expr = Expr(Head.binop, [op, self.to_namespace(obj), args[0]])
                 self._last_setval = None
                 return expr
         else:

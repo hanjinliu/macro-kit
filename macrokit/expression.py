@@ -3,7 +3,6 @@ from copy import deepcopy
 from typing import Callable, Iterable, Iterator, Any
 from enum import Enum
 from numbers import Number
-import ast
 from .symbol import Symbol
         
 class Head(Enum):
@@ -15,8 +14,28 @@ class Head(Enum):
     kw      = "kw"
     comment = "comment"
     assert_ = "assert_"
+    binop   = "binop"
 
 EXEC = (Head.assign, Head.assert_, Head.comment)
+
+BINOP_MAP = {
+    "__add__": Symbol("+"),
+    "__sub__": Symbol("-"),
+    "__mul__": Symbol("*"),
+    "__div__": Symbol("/"),
+    "__eq__": Symbol("=="),
+    "__neq__": Symbol("!="),
+    "__gt__": Symbol(">"),
+    "__ge__": Symbol(">="),
+    "__lt__": Symbol("<"),
+    "__le__": Symbol("<="),
+    "__pow__": Symbol("**"),
+    "__matmul__": Symbol("@"),
+    "__floordiv__": Symbol("//"),
+    "__and__": Symbol("&"),
+    "__or__": Symbol("|"),
+    "__xor__": Symbol("^")
+}
 
 class Expr:
     n: int = 0
@@ -31,6 +50,7 @@ class Expr:
         Head.kw     : lambda e: f"{e.args[0]}={e.args[1]}",
         Head.assert_: lambda e: f"assert {e.args[0]}, {e.args[1]}".rstrip(", "),
         Head.comment: lambda e: f"# {e.args[0]}",
+        Head.binop  : lambda e: f"({e.args[1]} {e.args[0]} {e.args[2]})"
     }
     
     def __init__(self, head: Head, args: Iterable[Any]):
@@ -180,51 +200,6 @@ class Expr:
                 else:
                     self.args[i] = new
         return self
-    
-def from_ast(ast_object: ast.AST) -> Expr | Symbol:
-    """
-    Convert a AST object into Expr/Symbol.
-    """    
-    if isinstance(ast_object, ast.Constant):
-        return symbol(ast_object.value)
-    elif isinstance(ast_object, ast.Name):
-        return Symbol(ast_object.id)
-    elif isinstance(ast_object, ast.Expr):
-        return from_ast(ast_object.value)
-    elif isinstance(ast_object, ast.Call):
-        head = Head.call
-        args = [from_ast(ast_object.func)] + [from_ast(k) for k in ast_object.args] + \
-            [Expr(Head.kw, [Symbol(k.arg), from_ast(k.value)]) for k in ast_object.keywords]
-        return Expr(head, args)
-    elif isinstance(ast_object, ast.Assign):
-        head = Head.assign
-        if len(ast_object.targets) != 1:
-            target = tuple(from_ast(x) for x in ast_object.targets)
-        else:
-            target = from_ast(ast_object.targets[0])
-        args = [target, from_ast(ast_object.value)]
-        return Expr(head, args)
-    elif isinstance(ast_object, ast.Attribute):
-        head = Head.getattr
-        args = [from_ast(ast_object.value), Symbol(ast_object.attr)]
-        return Expr(head, args)
-    elif isinstance(ast_object, ast.Subscript):
-        head = Head.getitem
-        args = [from_ast(ast_object.value), from_ast(ast_object.slice)]
-        return Expr(head, args)
-    elif isinstance(ast_object, (ast.List, ast.Tuple, ast.Set)):
-        return symbol([from_ast(k) for k in ast_object.elts])
-    elif isinstance(ast_object, ast.Dict):
-        return symbol({from_ast(k): from_ast(v) for k, v in zip(ast_object.keys, ast_object.values)})
-    else:
-        raise NotImplementedError(ast_object)
-
-def parse(source: str) -> Expr | Symbol:
-    """
-    Convert Python code string into Expr/Symbol objects.
-    """    
-    ast_object = ast.parse(source).body[0]
-    return from_ast(ast_object)
 
 def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol, Symbol|Expr]:
     _dict = {}

@@ -61,6 +61,11 @@ class Expr:
         self.__class__.n += 1
     
     def __repr__(self) -> str:
+        s = str(self)
+        s = s.lstrip("(").rstrip(")")
+        return f":({s})"
+    
+    def __str__(self) -> str:
         return self.__class__._map[self.head](self)
     
     def __eq__(self, expr: Expr|Symbol) -> bool:
@@ -202,20 +207,11 @@ class Expr:
         return self
 
 def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol, Symbol|Expr]:
-    _dict = {}
+    _dict: dict[Symbol, Symbol] = {}
     for k, v in mapping_list:
         if isinstance(v, Expr) and v.head in EXEC:
             raise ValueError("Cannot replace a symbol to a non-evaluable expression.")
-        sym = symbol(k)
-        if sym.constant:
-            _dict[sym] = v
-        else:
-            if isinstance(v, str):
-                _dict[sym] = Symbol(v)
-            elif isinstance(v, (Symbol, Expr)):
-                _dict[sym] = v
-            else:
-                raise TypeError(f"Cannot use {type(v)} for formatting a variable.")
+        _dict[symbol(k)] = symbol(v)
     return _dict
 
 

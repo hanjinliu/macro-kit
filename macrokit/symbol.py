@@ -39,7 +39,10 @@ class Symbol:
         self._name = newname
     
     def __repr__(self) -> str:
-        return ":" + self._name
+        if self.constant:
+            return self._name
+        else:
+            return ":" + self._name
     
     def __str__(self) -> str:
         return self._name

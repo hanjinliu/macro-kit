@@ -18,5 +18,5 @@ setup(
     license="BSD 3-Clause",
     download_url="https://github.com/hanjinliu/macro-kit",
     packages=find_packages(),
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     )

@@ -333,28 +333,32 @@ class mFunction(mObject):
                 return expr
         elif fname == "__setitem__":
             def make_expr(obj: _O, out, *args):
-                expr = Expr(Head.setitem, [self.to_namespace(obj), args[0], args[1]])
-                if self._last_setval == (Head.setitem, args[0]):
+                target = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
+                expr = Expr(Head.assign, [target, args[1]])
+                if self._last_setval == target:
                     self.macro.pop(-1)
                 else:
-                    self._last_setval = (Head.setitem, args[0])
+                    self._last_setval = target
                 return expr
         elif fname == "__setattr__":
             def make_expr(obj: _O, out, *args):
-                expr = Expr(Head.setattr, [self.to_namespace(obj), Symbol(args[0]), args[1]])
-                if self._last_setval == (Head.setattr, args[0]):
+                target = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
+                expr = Expr(Head.assign, [target, args[1]])
+                if self._last_setval == target:
                     self.macro.pop(-1)
                 else:
-                    self._last_setval = (Head.setattr, args[0])
+                    self._last_setval = target
                 return expr
         elif fname == "__delitem__":
             def make_expr(obj: _O, out, *args):
-                expr = Expr(Head.delitem, [self.to_namespace(obj), args[0]])
+                target = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
+                expr = Expr(Head.del_, [target])
                 self._last_setval = None
                 return expr
         elif fname == "__delattr__":
             def make_expr(obj: _O, out, *args):
-                expr = Expr(Head.delattr, [self.to_namespace(obj), Symbol(args[0])])
+                target = Expr(Head.getattr, [self.to_namespace(obj), args[0]])
+                expr = Expr(Head.del_, [target])
                 self._last_setval = None
                 return expr
         else:

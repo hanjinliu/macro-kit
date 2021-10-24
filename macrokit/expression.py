@@ -3,40 +3,30 @@ from copy import deepcopy
 from typing import Callable, Iterable, Iterator, Any
 from enum import Enum
 from numbers import Number
+import ast
 from .symbol import Symbol
         
 class Head(Enum):
-    init    = "init"
     getattr = "getattr"
-    setattr = "setattr"
-    delattr = "delattr"
     getitem = "getitem"
-    setitem = "setitem"
-    delitem = "delitem"
+    del_    = "del"
     call    = "call"
-    len     = "len"
     assign  = "assign"
     kw      = "kw"
     comment = "comment"
     assert_ = "assert_"
 
-EXEC = (Head.init, Head.assign, Head.setitem, Head.setattr, Head.assert_, Head.delattr, 
-        Head.delitem, Head.comment)
+EXEC = (Head.assign, Head.assert_, Head.comment)
 
 class Expr:
     n: int = 0
     
     # a map of how to conver expression into string.
     _map: dict[Head, Callable[[Expr], str]] = {
-        Head.init   : lambda e: f"{e.args[0]} = {e.args[1]}({', '.join(map(str, e.args[2:]))})",
         Head.getattr: lambda e: f"{e.args[0]}.{e.args[1]}",
-        Head.setattr: lambda e: f"{e.args[0]}.{e.args[1]} = {e.args[2]}",
-        Head.delattr: lambda e: f"del {e.args[0]}.{e.args[1]}",
         Head.getitem: lambda e: f"{e.args[0]}[{e.args[1]}]",
-        Head.setitem: lambda e: f"{e.args[0]}[{e.args[1]}] = {e.args[2]}",
-        Head.delitem: lambda e: f"del {e.args[0]}[{e.args[1]}]",
+        Head.del_   : lambda e: f"del {e.args[0]}",
         Head.call   : lambda e: f"{e.args[0]}({', '.join(map(str, e.args[1:]))})",
-        Head.len    : lambda e: f"len({e.args[0]})",
         Head.assign : lambda e: f"{e.args[0]} = {e.args[1]}",
         Head.kw     : lambda e: f"{e.args[0]}={e.args[1]}",
         Head.assert_: lambda e: f"assert {e.args[0]}, {e.args[1]}".rstrip(", "),
@@ -45,7 +35,7 @@ class Expr:
     
     def __init__(self, head: Head, args: Iterable[Any]):
         self.head = Head(head)
-        self.args = list(map(self.__class__.parse, args))
+        self.args = list(map(self.__class__.parse_object, args))
             
         self.number = self.__class__.n
         self.__class__.n += 1
@@ -60,7 +50,7 @@ class Expr:
             else:
                 return False
         else:
-            raise ValueError(f"'==' is not supported between Expr and {type(expr)}")
+            return False
     
     def _dump(self, ind: int = 0) -> str:
         """
@@ -110,8 +100,9 @@ class Expr:
         if kwargs is None:
             kwargs = {}
         sym = symbol(obj)
-        inputs = [sym, init_cls] + cls.convert_args(args, kwargs)
-        return cls(head=Head.init, args=inputs)
+        return cls(Head.assign, [sym, 
+                                 cls(Head.call, [init_cls] + cls.convert_args(args, kwargs))
+                                 ])
     
     @classmethod
     def parse_call(cls, 
@@ -140,7 +131,7 @@ class Expr:
         return inputs
     
     @classmethod
-    def parse(cls, a: Any) -> Symbol | Expr:
+    def parse_object(cls, a: Any) -> Symbol | Expr:
         return a if isinstance(a, cls) else symbol(a)
     
     def iter_args(self) -> Iterator[Symbol]:
@@ -189,6 +180,51 @@ class Expr:
                 else:
                     self.args[i] = new
         return self
+    
+def from_ast(ast_object: ast.AST) -> Expr | Symbol:
+    """
+    Convert a AST object into Expr/Symbol.
+    """    
+    if isinstance(ast_object, ast.Constant):
+        return symbol(ast_object.value)
+    elif isinstance(ast_object, ast.Name):
+        return Symbol(ast_object.id)
+    elif isinstance(ast_object, ast.Expr):
+        return from_ast(ast_object.value)
+    elif isinstance(ast_object, ast.Call):
+        head = Head.call
+        args = [from_ast(ast_object.func)] + [from_ast(k) for k in ast_object.args] + \
+            [Expr(Head.kw, [Symbol(k.arg), from_ast(k.value)]) for k in ast_object.keywords]
+        return Expr(head, args)
+    elif isinstance(ast_object, ast.Assign):
+        head = Head.assign
+        if len(ast_object.targets) != 1:
+            target = tuple(from_ast(x) for x in ast_object.targets)
+        else:
+            target = from_ast(ast_object.targets[0])
+        args = [target, from_ast(ast_object.value)]
+        return Expr(head, args)
+    elif isinstance(ast_object, ast.Attribute):
+        head = Head.getattr
+        args = [from_ast(ast_object.value), Symbol(ast_object.attr)]
+        return Expr(head, args)
+    elif isinstance(ast_object, ast.Subscript):
+        head = Head.getitem
+        args = [from_ast(ast_object.value), from_ast(ast_object.slice)]
+        return Expr(head, args)
+    elif isinstance(ast_object, (ast.List, ast.Tuple, ast.Set)):
+        return symbol([from_ast(k) for k in ast_object.elts])
+    elif isinstance(ast_object, ast.Dict):
+        return symbol({from_ast(k): from_ast(v) for k, v in zip(ast_object.keys, ast_object.values)})
+    else:
+        raise NotImplementedError(ast_object)
+
+def parse(source: str) -> Expr | Symbol:
+    """
+    Convert Python code string into Expr/Symbol objects.
+    """    
+    ast_object = ast.parse(source).body[0]
+    return from_ast(ast_object)
 
 def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol, Symbol|Expr]:
     _dict = {}

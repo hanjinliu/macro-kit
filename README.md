@@ -41,6 +41,8 @@ var0x24fdc2d1530 = str_add(1, 2)
 var0x24fdc211df0 = str_add(var0x24fdc2d1530, 'xyz')
 ```
 
+Use `format` method to rename variable names.
+
 ```python
 # substitute identifiers of variables
 # var0x24fdc2d1530 -> x
@@ -52,8 +54,10 @@ x = str_add(1, 2)
 var0x24fdc211df0 = str_add(x, 'xyz')
 ```
 
+`format` also support substitution with more complicated expressions.
+
 ```python
-# substitute to _dict["key"], or _dict.__getitem__("key")
+# substitute to _dict["key"]
 expr = Expr(head="getitem", args=[Symbol("_dict"), "key"])
 macro.format([(val0, expr)])
 ```
@@ -95,15 +99,21 @@ c.show()
 [Out]
 -10
 ```
+
+Note that value assignments are not recorded in duplicate.
+
 ```python
 macro.format([(c, "ins")])
 ```
 ```
 [Out]
 ins = C(1)
-ins.value = -10     # setattr (and setitem) will not be recorded in duplicate
+ins.value = -10     
 var0x7ffed09d2cd8 = ins.show()
 ```
+
+`eval` can evaluate macro.
+
 ```python
 macro.eval({"C": C})
 ```

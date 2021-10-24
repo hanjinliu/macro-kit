@@ -1,12 +1,12 @@
-__version__ = "0.1.0"
+__version__ = "0.2.0dev0"
 
 from .symbol import Symbol, register_type
-from .expression import Expr, Head, symbol
+from .expression import Expr, Head, symbol, parse
 from .macro import Macro
 from functools import wraps
 
 __all__ = ["Symbol", "Head", "Expr", "Macro",
-           "symbol", "register_type",
+           "symbol", "register_type", "parse",
            "blocked", "record", "property", "dump", "get_macro"
            ]
 
@@ -24,6 +24,7 @@ def record(obj = None, *, returned_callback = None):
 def property(prop):
     return _MACRO.property(prop)
 
+@wraps(_MACRO.dump)
 def dump() -> str:
     return _MACRO.dump()
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from contextlib import contextmanager
+from copy import deepcopy
 from importlib import import_module
 from functools import partial, wraps
 import inspect
@@ -223,14 +224,54 @@ class Macro(UserList):
         """
         return self.record(property(prop))
     
-    def call_builtin(self, func: Callable, *args, **kwargs):
+    def optimize(self, inplace=False) -> Macro:
         """
-        Call Python builtin function in macro recording mode.
+        Optimize macro readability by deleting unused variables.
+
+        Parameters
+        ----------
+        inplace : bool, default is False
+            If true, macro will be updated by the optimized one.
+
+        Returns
+        -------
+        Macro
+            Optimized macro.
+        """        
+        if not inplace:
+            self = deepcopy(self)
+        expr_map: list[tuple[Symbol, Expr]] = []
+        need = set()
+        for i, expr in enumerate(self):
+            expr: Expr|Symbol
+            if expr.head == Head.assign:
+                # TODO: a, b = func(...) don't work
+                expr_map.append((expr.args[0], i))
+                args = expr.args[1:]
+            else:
+                args = expr.args
+                
+            for arg in args:
+                if isinstance(arg, Expr):
+                    need |= set(a for a in arg.iter_args() if (not a.constant))
+                elif not arg.constant:
+                    need.add(arg)
+                    
+        for sym, i in expr_map:
+            if sym not in need:
+                self[i] = self[i].args[1]
+                
+        return self
+        
+        
+    def call_function(self, func: Callable, *args, **kwargs):
+        """
+        Call function in macro recording mode.
 
         Parameters
         ----------
         func : Callable
-            Builtin function.
+            Function you want to call.
         """        
         with self.blocked():
             out = func(*args, **kwargs)

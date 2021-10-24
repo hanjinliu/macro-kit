@@ -247,7 +247,8 @@ def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol
 def make_symbol_str(obj: Any):
     # hexadecimals are easier to distinguish
     _id = id(obj)
-    Symbol._variables.add(_id)
+    if obj is not None:
+        Symbol._variables.add(_id)
     return f"var{hex(_id)}"
 
 def symbol(obj: Any, constant: bool = True) -> Symbol:

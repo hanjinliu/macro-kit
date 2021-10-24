@@ -24,6 +24,7 @@ AST_BINOP_MAP = {
     ast.BitXor: Symbol("^")
 }
 
+NoneType = type(None)
 
 def parse(source: str) -> Expr | Symbol:
     """
@@ -33,11 +34,15 @@ def parse(source: str) -> Expr | Symbol:
     return from_ast(ast_object)
 
 @singledispatch
-def from_ast(ast_object: ast.AST):
+def from_ast(ast_object: ast.AST | NoneType):
     """
     Convert AST object to macro-kit object.
     """    
     raise NotImplementedError(f"AST type {type(ast_object)} cannot be converted now.")
+
+@from_ast.register
+def _(ast_object: NoneType):
+    return None
 
 @from_ast.register
 def _(ast_object: ast.Constant):
@@ -91,6 +96,13 @@ def _(ast_object: ast.Tuple):
 @from_ast.register
 def _(ast_object: ast.Set):
     return symbol(set(from_ast(k) for k in ast_object.elts))
+
+@from_ast.register
+def _(ast_object: ast.Slice):
+    return symbol(slice(from_ast(ast_object.lower), 
+                        from_ast(ast_object.upper),
+                        from_ast(ast_object.step))
+                  )
 
 @from_ast.register
 def _(ast_object: ast.Dict):

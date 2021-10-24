@@ -1,4 +1,4 @@
-__version__ = "0.2.0dev0"
+__version__ = "0.2.0"
 
 from .symbol import Symbol, register_type
 from .expression import Expr, Head, symbol

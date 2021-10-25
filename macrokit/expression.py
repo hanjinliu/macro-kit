@@ -20,6 +20,7 @@ class Head(Enum):
     return_  = "return"
     if_      = "if"
     elif_    = "elif"
+    annotate = "annotate"
 
 EXEC = (Head.assign, Head.assert_, Head.comment, Head.function, Head.return_, Head.if_, Head.elif_)
 
@@ -50,6 +51,7 @@ _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
                                  " "*i + f"else:\n{as_str(e.args[2], i+4)}",
     Head.elif_    : lambda e, i: " "*i + f"if {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}\n" + \
                                  " "*i + f"else:\n{as_str(e.args[2], i+4)}",
+    Head.annotate : lambda e, i: f"{as_str(e.args[0], i)}: {as_str(e.args[1])}"
 }
 
 class Expr:
@@ -95,7 +97,8 @@ class Expr:
         return "".join(out)
     
     def dump(self):
-        return self._dump()
+        s = self._dump()
+        return s.rstrip("\n") + "\n"
         
     def copy(self):
         return deepcopy(self)

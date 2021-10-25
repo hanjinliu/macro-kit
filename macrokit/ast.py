@@ -170,8 +170,23 @@ def _(ast_object: ast.FunctionDef):
 
 @from_ast.register
 def _(ast_object: ast.arg):
-    # TODO: type annotation. type=ast_object.annotation
-    return Symbol(ast_object.arg)
+    ann = ast_object.annotation
+    if ast_object.annotation is not None:
+        return Expr(Head.annotate, [Symbol(ast_object.arg), from_ast(ann)])
+    else:
+        return Symbol(ast_object.arg)
+
+@from_ast.register
+def _(ast_object: ast.AnnAssign):
+    head = Head.assign
+    target = from_ast(ast_object.target)
+    args = [Expr(Head.annotate, [target, from_ast(ast_object.annotation)]), 
+            from_ast(ast_object.value)]
+    return Expr(head, args)
+
+@from_ast.register
+def _(ast_object: ast.Pass):
+    return Symbol("pass") # Should it be Expr(Head.pass_, [Symbol("pass")]) ??
     
 @from_ast.register
 def _(ast_object: ast.Return):

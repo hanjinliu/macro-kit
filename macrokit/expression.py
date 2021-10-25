@@ -23,7 +23,8 @@ class Head(Enum):
     for_     = "for"
     annotate = "annotate"
 
-EXEC = (Head.assign, Head.assert_, Head.comment, Head.function, Head.return_, Head.if_, Head.elif_, Head.for_)
+EXEC = (Head.assign, Head.assert_, Head.comment, Head.block, Head.function, Head.return_,
+        Head.if_, Head.elif_, Head.for_)
 
 def as_str(expr: Any, indent: int = 0):
     if isinstance(expr, Expr):

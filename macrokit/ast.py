@@ -41,7 +41,12 @@ def parse(source: str | Callable) -> Expr | Symbol:
     """
     if callable(source):
         source = inspect.getsource(source)
-    ast_object = ast.parse(source).body[0]
+    body = ast.parse(source).body
+    if len(body) == 1:
+        ast_object = ast.parse(source).body[0]
+    else:
+        ast_object = ast.parse(source).body
+    
     return from_ast(ast_object)
 
 @singledispatch

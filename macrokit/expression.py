@@ -20,15 +20,21 @@ class Head(Enum):
     return_  = "return"
     if_      = "if"
     elif_    = "elif"
+    for_     = "for"
     annotate = "annotate"
 
-EXEC = (Head.assign, Head.assert_, Head.comment, Head.function, Head.return_, Head.if_, Head.elif_)
+EXEC = (Head.assign, Head.assert_, Head.comment, Head.function, Head.return_, Head.if_, Head.elif_, Head.for_)
 
 def as_str(expr: Any, indent: int = 0):
     if isinstance(expr, Expr):
         return _STR_MAP[expr.head](expr, indent)
     else:
         return " "*indent + str(expr)
+
+def rm_par(s: str):
+    if s[0] == "(" and s[-1] == ")":
+        s = s[1:-1]
+    return s
 
 def sjoin(sep: str, iterable: Iterable[Any], indent: int = 0):
     return sep.join(as_str(expr, indent) for expr in iterable)
@@ -47,10 +53,11 @@ _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
     Head.block    : lambda e, i: sjoin("\n", e.args, i),
     Head.function : lambda e, i: " "*i + f"def {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}",
     Head.return_  : lambda e, i: " "*i + f"return {sjoin(', ', e.args)}",
-    Head.if_      : lambda e, i: " "*i + f"if {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}\n" + \
+    Head.if_      : lambda e, i: " "*i + f"if {rm_par(as_str(e.args[0]))}:\n{as_str(e.args[1], i+4)}\n" + \
                                  " "*i + f"else:\n{as_str(e.args[2], i+4)}",
-    Head.elif_    : lambda e, i: " "*i + f"if {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}\n" + \
+    Head.elif_    : lambda e, i: " "*i + f"if {rm_par(as_str(e.args[0]))}:\n{as_str(e.args[1], i+4)}\n" + \
                                  " "*i + f"else:\n{as_str(e.args[2], i+4)}",
+    Head.for_     : lambda e, i: " "*i + f"for {rm_par(as_str(e.args[0]))}:\n{as_str(e.args[1], i+4)}",
     Head.annotate : lambda e, i: f"{as_str(e.args[0], i)}: {as_str(e.args[1])}"
 }
 
@@ -66,8 +73,7 @@ class Expr:
     
     def __repr__(self) -> str:
         s = str(self)
-        if s[0] == "(" and s[-1] == ")":
-            s = s[1:-1]
+        s = rm_par(s)
         s = s.replace("\n", "\n  ")
         return f":({s})"
     

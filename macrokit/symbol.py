@@ -57,6 +57,19 @@ class Symbol:
             raise TypeError(f"'==' is not supported between Symbol and {type(other)}")
         return self.object_id == other.object_id
     
+    @classmethod
+    def var(cls, identifier: str, type: type):
+        
+        # TODO: Need tests.
+        # _variables: set[int] -> dict[str, Symbol]
+        # constant -> property
+        if not identifier.isidentifier():
+            raise ValueError(f"'{identifier}' is not a valid identifier.")
+        self = cls(identifier, 0, type)
+        self.object_id = id(self)
+        self.constant = False
+        return self
+    
     def as_parameter(self, default=inspect._empty):
         return inspect.Parameter(self._name, 
                                  inspect.Parameter.POSITIONAL_OR_KEYWORD, 

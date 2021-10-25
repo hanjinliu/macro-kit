@@ -151,6 +151,13 @@ def _(ast_object: ast.If):
     return Expr(head, args)
 
 @from_ast.register
+def _(ast_object: ast.For):
+    head = Head.for_
+    top = Expr(Head.binop, [Symbol("in"), from_ast(ast_object.target), from_ast(ast_object.iter)])
+    block = from_ast(ast_object.body)
+    return Expr(head, [top, block])
+
+@from_ast.register
 def _(ast_object: list):
     head = Head.block
     args = [from_ast(k) for k in ast_object]

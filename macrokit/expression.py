@@ -6,53 +6,55 @@ from numbers import Number
 from .symbol import Symbol
         
 class Head(Enum):
-    getattr = "getattr"
-    getitem = "getitem"
-    del_    = "del"
-    call    = "call"
-    assign  = "assign"
-    kw      = "kw"
-    comment = "comment"
-    assert_ = "assert_"
-    binop   = "binop"
+    getattr  = "getattr"
+    getitem  = "getitem"
+    del_     = "del"
+    call     = "call"
+    assign   = "assign"
+    kw       = "kw"
+    comment  = "comment"
+    assert_  = "assert"
+    binop    = "binop"
+    block    = "block"
+    function = "function"
+    return_  = "return"
+    if_      = "if"
+    elif_    = "elif"
 
-EXEC = (Head.assign, Head.assert_, Head.comment)
+EXEC = (Head.assign, Head.assert_, Head.comment, Head.function, Head.return_, Head.if_, Head.elif_)
 
-BINOP_MAP = {
-    "__add__": Symbol("+"),
-    "__sub__": Symbol("-"),
-    "__mul__": Symbol("*"),
-    "__div__": Symbol("/"),
-    "__eq__": Symbol("=="),
-    "__neq__": Symbol("!="),
-    "__gt__": Symbol(">"),
-    "__ge__": Symbol(">="),
-    "__lt__": Symbol("<"),
-    "__le__": Symbol("<="),
-    "__pow__": Symbol("**"),
-    "__matmul__": Symbol("@"),
-    "__floordiv__": Symbol("//"),
-    "__and__": Symbol("&"),
-    "__or__": Symbol("|"),
-    "__xor__": Symbol("^")
+def as_str(expr: Any, indent: int = 0):
+    if isinstance(expr, Expr):
+        return _STR_MAP[expr.head](expr, indent)
+    else:
+        return " "*indent + str(expr)
+
+def sjoin(sep: str, iterable: Iterable[Any], indent: int = 0):
+    return sep.join(as_str(expr, indent) for expr in iterable)
+
+_STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
+    Head.getattr  : lambda e, i: f"{as_str(e.args[0], i)}.{as_str(e.args[1])}",
+    Head.getitem  : lambda e, i: f"{as_str(e.args[0], i)}[{as_str(e.args[1])}]",
+    Head.del_     : lambda e, i: " "*i + f"del {as_str(e.args[0])}",
+    Head.call     : lambda e, i: f"{as_str(e.args[0], i)}({sjoin(', ', e.args[1:])})",
+    Head.assign   : lambda e, i: f"{as_str(e.args[0], i)} = {e.args[1]}",
+    Head.kw       : lambda e, i: f"{as_str(e.args[0])}={as_str(e.args[1])}",
+    Head.assert_  : lambda e, i: " "*i + f"assert {as_str(e.args[0])}, {as_str(e.args[1])}".rstrip(", "),
+    Head.comment  : lambda e, i: " "*i + f"# {e.args[0]}",
+    Head.binop    : lambda e, i: " "*i + f"({as_str(e.args[1])} {as_str(e.args[0])} {as_str(e.args[2])})",
+    
+    Head.block    : lambda e, i: sjoin("\n", e.args, i),
+    Head.function : lambda e, i: " "*i + f"def {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}",
+    Head.return_  : lambda e, i: " "*i + f"return {sjoin(', ', e.args)}",
+    Head.if_      : lambda e, i: " "*i + f"if {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}\n" + \
+                                 " "*i + f"else:\n{as_str(e.args[2], i+4)}",
+    Head.elif_    : lambda e, i: " "*i + f"if {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}\n" + \
+                                 " "*i + f"else:\n{as_str(e.args[2], i+4)}",
 }
 
 class Expr:
     n: int = 0
-    
-    # a map of how to conver expression into string.
-    _map: dict[Head, Callable[[Expr], str]] = {
-        Head.getattr: lambda e: f"{e.args[0]}.{e.args[1]}",
-        Head.getitem: lambda e: f"{e.args[0]}[{e.args[1]}]",
-        Head.del_   : lambda e: f"del {e.args[0]}",
-        Head.call   : lambda e: f"{e.args[0]}({', '.join(map(str, e.args[1:]))})",
-        Head.assign : lambda e: f"{e.args[0]} = {e.args[1]}",
-        Head.kw     : lambda e: f"{e.args[0]}={e.args[1]}",
-        Head.assert_: lambda e: f"assert {e.args[0]}, {e.args[1]}".rstrip(", "),
-        Head.comment: lambda e: f"# {e.args[0]}",
-        Head.binop  : lambda e: f"({e.args[1]} {e.args[0]} {e.args[2]})"
-    }
-    
+        
     def __init__(self, head: Head, args: Iterable[Any]):
         self.head = Head(head)
         self.args = list(map(self.__class__.parse_object, args))
@@ -62,11 +64,13 @@ class Expr:
     
     def __repr__(self) -> str:
         s = str(self)
-        s = s.lstrip("(").rstrip(")")
+        if s[0] == "(" and s[-1] == ")":
+            s = s[1:-1]
+        s = s.replace("\n", "\n  ")
         return f":({s})"
     
     def __str__(self) -> str:
-        return self.__class__._map[self.head](self)
+        return as_str(self)
     
     def __eq__(self, expr: Expr|Symbol) -> bool:
         if isinstance(expr, self.__class__):

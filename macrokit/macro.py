@@ -8,7 +8,7 @@ from collections import UserList
 from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar, Hashable
 from types import ModuleType
 
-from .expression import BINOP_MAP, Head, Expr, symbol, EXEC, check_format_mapping
+from .expression import Head, Expr, symbol, EXEC, check_format_mapping
 from .symbol import Symbol
 
 # types
@@ -21,6 +21,26 @@ _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__di
                    "__init_subclass__", "__subclasshook__")
 
 _INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotations__")
+
+
+BINOP_MAP = {
+    "__add__": Symbol("+"),
+    "__sub__": Symbol("-"),
+    "__mul__": Symbol("*"),
+    "__div__": Symbol("/"),
+    "__eq__": Symbol("=="),
+    "__neq__": Symbol("!="),
+    "__gt__": Symbol(">"),
+    "__ge__": Symbol(">="),
+    "__lt__": Symbol("<"),
+    "__le__": Symbol("<="),
+    "__pow__": Symbol("**"),
+    "__matmul__": Symbol("@"),
+    "__floordiv__": Symbol("//"),
+    "__and__": Symbol("&"),
+    "__or__": Symbol("|"),
+    "__xor__": Symbol("^")
+}
 
 class Macro(UserList):
     """

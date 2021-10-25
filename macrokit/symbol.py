@@ -7,6 +7,8 @@ from types import FunctionType, BuiltinFunctionType, ModuleType
 
 T = TypeVar("T")
 
+# TODO: method of making identical Symbols from string. Maybe using hash(str)?
+
 class Symbol:
     # Map of how to convert object into a symbol.
     _type_map: dict[type, Callable[[Any], str]] = {

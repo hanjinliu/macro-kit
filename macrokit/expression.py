@@ -111,15 +111,33 @@ class Expr:
             out.append(f"{i:>{ind+2}}: {value}\n")
         return "".join(out)
     
-    def dump(self):
+    def dump(self) -> str:
+        """
+        Dump expression into a tree.
+        """        
         s = self._dump()
         return s.rstrip("\n") + "\n"
         
-    def copy(self):
+    def copy(self) -> Expr:
         # Always copy object deeply.
         return deepcopy(self)
     
     def eval(self, _globals: dict[Symbol|str, Any] = {}, _locals: dict = {}):
+        """
+        Evaluate or execute macro as an Python script.
+        
+        Either ``eval`` or ``exec`` is called for every expressions, as determined by its
+        header. Calling this function is much safer than those not-recommended usage of 
+        ``eval`` or ``exec``.
+        
+        Parameters
+        ----------
+        _globals : dict[Symbol, Any], optional
+            Mapping from global variable symbols to their values.
+        _locals : dict, optional
+            Updated variable namespace. Will be a mapping from symbols to values.
+            
+        """        
         _globals = {(sym.name if isinstance(sym, Symbol) else sym): v 
                     for sym, v in _globals.items()}
         # TODO: Here should be some better ways to assign proper scope.
@@ -209,7 +227,6 @@ class Expr:
         if not yielded:
             yield self
     
-    
     @overload
     def format(self, mapping: dict[Hashable, Symbol|Expr], inplace: bool = False) -> Expr:...
         
@@ -217,6 +234,27 @@ class Expr:
     def format(self, mapping: Iterable[tuple[Any, Symbol|Expr]], inplace: bool = False) -> Expr:...
     
     def format(self, mapping: dict[Symbol, Symbol|Expr], inplace: bool = False) -> Expr:
+        """
+        Format expressions in the macro.
+        
+        Just like formatting method of string, this function can replace certain symbols to
+        others. 
+        
+        Parameters
+        ----------
+        mapping : dict or iterable of tuples
+            Mapping from objects to symbols or expressions. Keys will be converted to symbol.
+            For instance, if you used ``arr``, a numpy.ndarray as an input of an macro-recordable
+            function, that input will appear like 'var0x1...'. By calling ``format([(arr, "X")])``
+            then 'var0x1...' will be substituted to 'X'.
+        inplace : bool, default is False
+            Macro will be overwritten if true.
+            
+        Returns
+        -------
+        Macro
+            Formatted macro.
+        """        
         if isinstance(mapping, dict):
             mapping = mapping.items()
         mapping = check_format_mapping(mapping)

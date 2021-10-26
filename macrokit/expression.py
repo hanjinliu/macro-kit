@@ -113,6 +113,7 @@ class Expr:
     def eval(self, _globals: dict[Symbol|str, Any] = {}, _locals: dict = {}):
         _globals = {(sym.name if isinstance(sym, Symbol) else sym): v 
                     for sym, v in _globals.items()}
+        # TODO: Here should be some better ways to assign proper scope.
         if self.head in EXEC:
             return exec(str(self), _globals, _locals)
         else:

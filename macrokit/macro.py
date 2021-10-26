@@ -78,6 +78,12 @@ class Macro(UserList):
     def __repr__(self) -> str:
         return "\n".join(map(repr, self))
     
+    @classmethod
+    def from_block(cls, expr: Expr):
+        if expr.head != Head.block:
+            raise ValueError("Cannot convert Expr with block header into Macro.")
+        return cls(expr.args)
+        
     def dump(self) -> str:
         """
         Make a meta-code in Julian way.

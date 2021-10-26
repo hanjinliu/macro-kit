@@ -8,6 +8,25 @@ from ..expression import Expr
 from ..ast import parse
 
 def register_magic(func: Callable[[Expr], Expr]):
+    """
+    Make a magic command more like Julia's macro system.
+    
+    Instead of using string, you can register a magic that uses Expr as the 
+    input and return a modified Expr. It is usually easier and safer to
+    execute metaprogramming this way.
+
+    Parameters
+    ----------
+    func : Callable[[Expr], Expr]
+        Function that will used as a magic command.
+
+    Returns
+    -------
+    Callable
+        Registered function itself.
+    """    
+    @register_line_cell_magic
+    @needs_local_scope
     @wraps(func)
     def _ipy_magic(line: str, cell: str = None, local_ns = None):
         if cell is None:
@@ -15,5 +34,4 @@ def register_magic(func: Callable[[Expr], Expr]):
         block = parse(cell)
         block_out = func(block)
         return block_out.eval(local_ns, local_ns)
-    register_line_cell_magic(needs_local_scope(_ipy_magic))
     return func

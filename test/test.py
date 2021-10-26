@@ -42,3 +42,18 @@ def test_module():
         "img = numpy.random.normal(size=(128, 128))\n" \
         "out = skimage.filters.gaussian(img, sigma=2)\n" \
         "thr = skimage.filters.threshold_otsu(out)"
+
+def test_format():
+    from macrokit import Macro
+    macro = Macro()
+
+    @macro.record
+    def str_add(a, b):
+        return str(a) + str(b)
+
+    val0 = str_add(1, 2)
+    val1 = str_add(val0, "xyz")
+    macro_str = str(macro.format([(val0, Symbol("X")), (val1, Symbol("Y"))]))
+    assert macro_str == \
+        "X = str_add(1, 2)\n" \
+        "Y = str_add(X, 'xyz')"

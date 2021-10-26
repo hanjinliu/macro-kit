@@ -1,14 +1,14 @@
 from __future__ import annotations
 from contextlib import contextmanager
 from copy import deepcopy
+from collections.abc import MutableSequence
 from importlib import import_module
 from functools import partial, wraps
 import inspect
-from collections import UserList
-from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar, Hashable
+from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar
 from types import ModuleType
 
-from .expression import Head, Expr, symbol, EXEC, check_format_mapping
+from .expression import Head, Expr, symbol, EXEC
 from .symbol import Symbol
 
 # types
@@ -42,26 +42,15 @@ BINOP_MAP = {
     "__xor__": Symbol("^")
 }
 
-class Macro(UserList):
-    """
-    List of expressions. A Macro object corresponds to a Python script.
-    """    
-    def __init__(self, iterable: Iterable = (), *, active: bool = True):
-        super().__init__(iterable)
+class Macro(Expr, MutableSequence[Expr]):
+    def __init__(self, args: Iterable[Expr] = (), *, active: bool = True):
+        super().__init__(head=Head.block, args=args)
         self.active = active
         
-    def append(self, expr: Expr):
-        if not isinstance(expr, Expr):
-            raise TypeError("Cannot append objects to Macro except for Expr objecs.")
-        return super().append(expr)
-    
     def insert(self, key: int, expr: Expr):
         if not isinstance(expr, Expr):
             raise TypeError("Cannot insert objects to Macro except for Expr objecs.")
-        return super().insert(key, expr)
-    
-    def __str__(self) -> str:
-        return "\n".join(map(str, self))
+        self.args.insert(key, expr)
     
     @overload
     def __getitem__(self, key: int | str) -> Expr: ...
@@ -70,61 +59,19 @@ class Macro(UserList):
     def __getitem__(self, key: slice) -> Macro[Expr]: ...
         
     def __getitem__(self, key):
-        return super().__getitem__(key)
+        return self._args[key]
+    
+    def __setitem__(self, key: int, value: Expr):
+        self._args[key] = value
+    
+    def __delitem__(self, key: int):
+        del self._args[key]
+    
+    def __len__(self) -> int:
+        return len(self._args)
     
     def __iter__(self) -> Iterator[Expr]:
-        return super().__iter__()
-    
-    def __repr__(self) -> str:
-        return "\n".join(map(repr, self))
-    
-    @classmethod
-    def from_block(cls, expr: Expr):
-        if expr.head != Head.block:
-            raise ValueError("Cannot convert Expr with block header into Macro.")
-        return cls(expr.args)
-        
-    def dump(self) -> str:
-        """
-        Make a meta-code in Julian way.
-
-        Returns
-        -------
-        str
-            Meta-code.
-        """        
-        return ",\n".join(expr.dump() for expr in self)
-    
-    def eval(self, _globals: dict[Symbol, Any] = {}, _locals: dict[Symbol, Any] = {}) -> Any:
-        """
-        Evaluate or execute macro as an Python script.
-        
-        Either ``eval`` or ``exec`` is called for every expressions, as determined by its
-        header. Calling this function is much safer than those not-recommended usage of 
-        ``eval`` or ``exec``.
-
-        Parameters
-        ----------
-        _globals : dict[Symbol, Any], optional
-            Mapping from global variable symbols to their values.
-        _locals : dict, optional
-            Updated variable namespace. Will be a mapping from symbols to values.
-
-        Returns
-        -------
-        Any
-            The last returned value.
-        """        
-        namespace = _globals.copy()
-        names = dict()
-        with self.blocked():
-            for expr in self:
-                namespace.update(names)
-                names = {}
-                out = expr.eval(namespace, names)
-            namespace.update(names)
-        _locals.update({Symbol(k): v for k, v in namespace.items()})
-        return out
+        return iter(self._args)
     
     @contextmanager
     def blocked(self):
@@ -137,45 +84,6 @@ class Macro(UserList):
             yield
         finally:
             self.active = was_active
-    
-    @overload
-    def format(self, mapping: dict[Hashable, Symbol|Expr], inplace: bool = False) -> Macro:...
-        
-    @overload
-    def format(self, mapping: Iterable[tuple[Any, Symbol|Expr]], inplace: bool = False) -> Macro:...
-    
-    def format(self, mapping, inplace: bool = False) -> Macro:
-        """
-        Format expressions in the macro.
-        
-        Just like format method of string, this function can replace certain symbols to
-        others. 
-
-        Parameters
-        ----------
-        mapping : dict or iterable of tuples
-            Mapping from objects to symbols or expressions. Keys will be converted to symbol.
-            For instance, if you used ``arr``, a numpy.ndarray as an input of an macro-recordable
-            function, that input will appear like 'var0x1...'. By calling ``format([(arr, "X")])``
-            then 'var0x1...' will be substituted to 'X'.
-        inplace : bool, default is False
-            Macro will be overwritten if true.
-
-        Returns
-        -------
-        Macro
-            Formatted macro.
-        """        
-        if isinstance(mapping, dict):
-            mapping = mapping.items()
-            
-        m = check_format_mapping(mapping)
-        cls = self.__class__
-        
-        if inplace:
-            return cls(expr._unsafe_format(m) for expr in self)
-        else:
-            return cls(expr.copy()._unsafe_format(m) for expr in self)
     
     @overload
     def record(self, obj: _property, *, returned_callback: MetaCallable = None) -> mProperty: ...
@@ -266,7 +174,7 @@ class Macro(UserList):
         """        
         if not inplace:
             self = deepcopy(self)
-        expr_map: list[tuple[Symbol, Expr]] = []
+        expr_map: list[tuple[Symbol, int]] = []
         need = set()
         for i, expr in enumerate(self):
             expr: Expr|Symbol

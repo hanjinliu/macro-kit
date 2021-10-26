@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import deepcopy
-from typing import Callable, Iterable, Iterator, Any
+from typing import Callable, Iterable, Iterator, Any, Hashable, overload
 from enum import Enum
 from numbers import Number
 from .symbol import Symbol
@@ -66,12 +66,20 @@ class Expr:
     n: int = 0
         
     def __init__(self, head: Head, args: Iterable[Any]):
-        self.head = Head(head)
-        self.args = list(map(self.__class__.parse_object, args))
+        self._head = Head(head)
+        self._args = list(map(self.__class__.parse_object, args))
             
         self.number = self.__class__.n
         self.__class__.n += 1
     
+    @property
+    def head(self) -> Head:
+        return self._head
+    
+    @property
+    def args(self) -> list[Expr|Symbol]:
+        return self._args
+        
     def __repr__(self) -> str:
         s = str(self)
         s = rm_par(s)
@@ -108,6 +116,7 @@ class Expr:
         return s.rstrip("\n") + "\n"
         
     def copy(self):
+        # Always copy object deeply.
         return deepcopy(self)
     
     def eval(self, _globals: dict[Symbol|str, Any] = {}, _locals: dict = {}):
@@ -200,8 +209,17 @@ class Expr:
         if not yielded:
             yield self
     
+    
+    @overload
+    def format(self, mapping: dict[Hashable, Symbol|Expr], inplace: bool = False) -> Expr:...
+        
+    @overload
+    def format(self, mapping: Iterable[tuple[Any, Symbol|Expr]], inplace: bool = False) -> Expr:...
+    
     def format(self, mapping: dict[Symbol, Symbol|Expr], inplace: bool = False) -> Expr:
-        mapping = check_format_mapping(mapping.items())
+        if isinstance(mapping, dict):
+            mapping = mapping.items()
+        mapping = check_format_mapping(mapping)
             
         if not inplace:
             self = self.copy()

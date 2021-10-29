@@ -46,11 +46,18 @@ class Macro(Expr, MutableSequence[Expr]):
     def __init__(self, args: Iterable[Expr] = (), *, active: bool = True):
         super().__init__(head=Head.block, args=args)
         self.active = active
+        self._callbacks = []
+    
+    @property
+    def callbacks(self):
+        return self._callbacks
         
     def insert(self, key: int, expr: Expr):
         if not isinstance(expr, Expr):
             raise TypeError("Cannot insert objects to Macro except for Expr objecs.")
         self.args.insert(key, expr)
+        for callback in self._callbacks:
+            callback(expr)
     
     @overload
     def __getitem__(self, key: int | str) -> Expr: ...
@@ -121,6 +128,8 @@ class Macro(Expr, MutableSequence[Expr]):
                 return self.record_methods(_obj, returned_callback=returned_callback)
             elif callable(_obj) and not isinstance(_obj, mObject):
                 return mFunction(_obj, macro=self, returned_callback=returned_callback)
+            elif isinstance(_obj, mObject):
+                return type(_obj)(_obj.obj, macro=self, returned_callback=returned_callback)
             else:
                 raise TypeError(f"Type {type(_obj)} is not macro recordable.")
         

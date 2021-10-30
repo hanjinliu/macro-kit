@@ -146,6 +146,11 @@ class Macro(Expr, MutableSequence[Expr]):
             elif isinstance(attr, MacroMixin):
                 update_namespace(attr)
                 _dict[name] = attr
+            else:
+                try:
+                    _dict[name] = self.record(attr, returned_callback=returned_callback)
+                except TypeError:
+                    pass
         
         newcls = type(cls.__name__, (MacroMixin, cls), _dict)
         
@@ -258,10 +263,11 @@ class mObject:
         self._last_setval: tuple[Head, Any] = None
     
     def to_namespace(self, obj) -> Symbol | Expr:
+        sym = symbol(obj)
         if self.namespace is None:
-            return symbol(obj)
+            return sym
         else:
-            return Expr(Head.getattr, [self.namespace, symbol(obj)])
+            return Expr(Head.getattr, [self.namespace, sym])
 
 Symbol.register_type(mObject, lambda o: symbol(o.obj))
 
@@ -269,6 +275,7 @@ class mFunction(mObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None):
+        self.isclassmethod = isclassmethod(function)
         super().__init__(function, macro, returned_callback, namespace)
         self._method_type = self._make_method_type()
             
@@ -291,6 +298,7 @@ class mFunction(mObject):
         return out
     
     def _make_method_type(self):
+        # TODO: wrapper_descriptor is not recorded correctly
         fname = getattr(self.obj, "__name__", None)
         if fname == "__init__":
             def make_expr(obj: _O, out, *args, **kwargs):
@@ -361,7 +369,10 @@ class mFunction(mObject):
         @wraps(self.obj)
         def method(obj: _O, *args, **kwargs):
             with self.macro.blocked():
-                out = self.obj(obj, *args, **kwargs)
+                if self.isclassmethod:
+                    out = self.obj(*args, **kwargs)
+                else:
+                    out = self.obj(obj, *args, **kwargs)
             if self.macro.active:
                 expr = make_expr(obj, out, *args, **kwargs)
                 if expr is not None:
@@ -493,3 +504,20 @@ def _assign_value_callback(expr: Expr, out: Any):
     else:
         expr_assign = expr        
     return expr_assign
+
+def isclassmethod(method: Any):
+    """
+    Check if method is a class method.
+    
+    https://stackoverflow.com/questions/19227724/check-if-a-function-uses-classmethod
+    """    
+    bound_to = getattr(method, "__self__", None)
+    if not isinstance(bound_to, type):
+        # must be bound to a class
+        return False
+    name = method.__name__
+    for cls in bound_to.__mro__:
+        descriptor = vars(cls).get(name)
+        if descriptor is not None:
+            return isinstance(descriptor, classmethod)
+    return False

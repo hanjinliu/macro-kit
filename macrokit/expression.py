@@ -6,6 +6,7 @@ from numbers import Number
 from .symbol import Symbol
         
 class Head(Enum):
+    empty    = "empty"
     getattr  = "getattr"
     getitem  = "getitem"
     del_     = "del"
@@ -41,6 +42,7 @@ def sjoin(sep: str, iterable: Iterable[Any], indent: int = 0):
     return sep.join(as_str(expr, indent) for expr in iterable)
 
 _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
+    Head.empty    : lambda e, i: "",
     Head.getattr  : lambda e, i: f"{as_str(e.args[0], i)}.{as_str(e.args[1])}",
     Head.getitem  : lambda e, i: f"{as_str(e.args[0], i)}[{as_str(e.args[1])}]",
     Head.del_     : lambda e, i: " "*i + f"del {as_str(e.args[0])}",

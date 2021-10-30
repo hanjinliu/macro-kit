@@ -82,7 +82,8 @@ class Expr:
         
     def __repr__(self) -> str:
         s = str(self)
-        s = rm_par(s)
+        if len(s) > 1:
+            s = rm_par(s)
         s = s.replace("\n", "\n  ")
         return f":({s})"
     

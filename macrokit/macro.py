@@ -260,7 +260,7 @@ class mObject:
             if hasattr(self.obj, name):
                 setattr(self, name, getattr(self.obj, name))
         
-        self._last_setval: tuple[Head, Any] = None
+        self._last_setval: Expr = None
     
     def to_namespace(self, obj) -> Symbol | Expr:
         sym = symbol(obj)
@@ -421,11 +421,12 @@ class mProperty(mObject, property):
             with self.macro.blocked():
                 out = fset(obj, value)
             if self.macro.active:
-                expr = Expr(Head.setattr, [self.to_namespace(obj), key, value])
-                if self._last_setval == (Head.setattr, key.name):
+                target = Expr(Head.getattr, [self.to_namespace(obj), key])
+                expr = Expr(Head.assign, [target, value])
+                if self._last_setval == target:
                     self.macro.pop(-1)
                 else:
-                    self._last_setval = (Head.setattr, key.name)
+                    self._last_setval = target
                 
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
@@ -441,7 +442,8 @@ class mProperty(mObject, property):
             with self.macro.blocked():
                 out = fdel(obj)
             if self.macro.active:
-                expr = Expr(Head.delattr, [self.to_namespace(obj), key])
+                target = Expr(Head.getattr, [self.to_namespace(obj), key])
+                expr = Expr(Head.del_, [target])
                 line = self.returned_callback(expr, out)
                 self.macro.append(line)
                 self._last_setval = None

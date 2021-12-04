@@ -5,7 +5,7 @@ from collections.abc import MutableSequence
 from importlib import import_module
 from functools import partial, wraps
 import inspect
-from typing import Callable, Iterable, Iterator, Any, Union, overload, TypeVar
+from typing import Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar
 from types import ModuleType
 
 from .expression import Head, Expr, symbol, EXEC
@@ -22,6 +22,7 @@ _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__di
 
 _INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotations__")
 
+# TODO: mProperty needs updates, like only record setter.
 
 BINOP_MAP = {
     "__add__": Symbol("+"),
@@ -42,19 +43,43 @@ BINOP_MAP = {
     "__xor__": Symbol("^")
 }
 
+class MacroFlags(TypedDict):
+    Get: bool
+    Set: bool
+    Delete: bool
+    Return: bool
+
+FLAG_MAP = {
+    "__getitem__": "Get",
+    "__getattr__": "Get",
+    "__setitem__": "Set",
+    "__setattr__": "Set",
+    "__delitem__": "Delete",
+    "__delattr__": "Delete"
+}
+
 class Macro(Expr, MutableSequence[Expr]):
-    def __init__(self, args: Iterable[Expr] = (), *, active: bool = True):
+    """
+    A special form of an expression with header "block".
+    This class behaves in a list-like way and specifically useful for macro recording.
+    """    
+    def __init__(self, args: Iterable[Expr] = ()):
         super().__init__(head=Head.block, args=args)
-        self.active = active
+        self.active = True
         self._callbacks = []
+        self._flags = MacroFlags(Get=True, Set=True, Delete=True, Return=True)
     
     @property
     def callbacks(self):
         return self._callbacks
+    
+    @property
+    def flags(self):
+        return self._flags
         
     def insert(self, key: int, expr: Expr):
         if not isinstance(expr, Expr):
-            raise TypeError("Cannot insert objects to Macro except for Expr objecs.")
+            raise TypeError("Cannot insert objects to Macro except for Expr objects.")
         self.args.insert(key, expr)
         for callback in self._callbacks:
             callback(expr)
@@ -119,29 +144,38 @@ class Macro(Expr, MutableSequence[Expr]):
             A function that will called after new expression is appended. Must take an expression
             or an expression with the last returned value as inputs.
         """        
+        kwargs = dict(macro=self, 
+                      returned_callback=returned_callback, 
+                      record_returned=self._flags["Return"]
+                      )
         def wrapper(_obj):
             if isinstance(_obj, property):
-                return mProperty(_obj, macro=self, returned_callback=returned_callback)
-            elif inspect.ismodule(_obj):
-                return mModule(_obj, macro=self, returned_callback=returned_callback)
-            elif inspect.isclass(_obj) and _obj is not type:
-                return self.record_methods(_obj, returned_callback=returned_callback)
-            elif callable(_obj) and not isinstance(_obj, mObject):
-                return mFunction(_obj, macro=self, returned_callback=returned_callback)
+                return mProperty(_obj, **kwargs)
+            elif isinstance(_obj, ModuleType):
+                return mModule(_obj, **kwargs)
+            elif isinstance(_obj, type) and _obj is not type:
+                return self._record_methods(_obj, returned_callback=returned_callback)
+            elif isinstance(_obj, Callable) and not isinstance(_obj, mObject):
+                return mFunction(_obj, **kwargs)
             elif isinstance(_obj, mObject):
-                return type(_obj)(_obj.obj, macro=self, returned_callback=returned_callback)
+                return type(_obj)(_obj.obj, **kwargs)
             else:
                 raise TypeError(f"Type {type(_obj)} is not macro recordable.")
         
         return wrapper if obj is None else wrapper(obj)
 
     
-    def record_methods(self, cls: type, returned_callback: MetaCallable = None):
-        _dict = {}
+    def _record_methods(self, cls: type, returned_callback: MetaCallable = None):
+        _dict: dict[str, mObject] = {}
         for name, attr in inspect.getmembers(cls):
             if name in _NON_RECORDABLE:
                 continue
-            if callable(attr) or isinstance(attr, property):
+            if isinstance(attr, Callable):
+                key = FLAG_MAP.get(name, None)
+                if key is not None and not self._flags[key]:
+                    continue
+                _dict[name] = self.record(attr, returned_callback=returned_callback)
+            if isinstance(attr, property):
                 _dict[name] = self.record(attr, returned_callback=returned_callback)
             elif isinstance(attr, MacroMixin):
                 update_namespace(attr)
@@ -225,15 +259,28 @@ class Macro(Expr, MutableSequence[Expr]):
             out = func(*args, **kwargs)
         if self.active:
             expr = Expr.parse_call(func, args, kwargs)
-            line = _assign_value_callback(expr, out)
-            self.append(line)
+            if self._flags["Return"]:
+                expr = _assign_value(expr, out)
+            self.append(expr)
             self._last_setval = None
         return out
 
 class MacroMixin:
-    pass
+    """
+    Any class objects that are wrapped with ``Macro.record`` will inherit this class.
+    """
 
 def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
+    """
+    Update the namespace of a ``MacroMixin`` object.
+
+    Parameters
+    ----------
+    obj : MacroMixin
+        Input object.
+    namespace : Symbol or Expr
+        Namespace.
+    """
     new = Expr(Head.getattr, [namespace, symbol(obj)])
     for name, attr in inspect.getmembers(obj):
         if isinstance(attr, mObject):
@@ -244,25 +291,42 @@ def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
 class mObject:
     obj: Any
     def __init__(self, obj: Any, macro: Macro, returned_callback: MetaCallable = None, 
-                 namespace: Symbol|Expr = None) -> None:
+                 namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
         self.obj = obj
-        self.returned_callback = returned_callback or (lambda expr, out: expr)
+        
+        if returned_callback is not None:
+            _callback_nargs = len(inspect.signature(returned_callback).parameters)
+            if _callback_nargs == 1:
+                returned_callback = lambda expr, out: returned_callback(expr)
+            
+            elif _callback_nargs != 2:
+                raise TypeError("returned_callback cannot take arguments more than two.")
+            
+            if record_returned:
+                self.returned_callback = lambda expr, out: \
+                    returned_callback(_assign_value(expr, out), out)
+            else:
+                self.returned_callback = returned_callback
+        
+        else:
+            if record_returned:
+                self.returned_callback = _assign_value
+            else:
+                self.returned_callback = lambda expr, out: expr
+            
         self.namespace = namespace
-        _callback_nargs = len(inspect.signature(self.returned_callback).parameters)
-        if _callback_nargs == 1:
-            self.returned_callback = lambda expr, out: self.returned_callback(expr)
         
-        elif _callback_nargs != 2:
-            raise TypeError("returned_callback cannot take arguments more than two.")
-        
-        self.macro: Macro = macro
+        self.macro = macro
         for name in _INHERITABLE:
             if hasattr(self.obj, name):
                 setattr(self, name, getattr(self.obj, name))
         
         self._last_setval: Expr = None
     
-    def to_namespace(self, obj) -> Symbol | Expr:
+    def to_namespace(self, obj: Any) -> Symbol | Expr:
+        """
+        Return the expression of ``obj`` in the correct name space.
+        """        
         sym = symbol(obj)
         if self.namespace is None:
             return sym
@@ -274,9 +338,9 @@ Symbol.register_type(mObject, lambda o: symbol(o.obj))
 class mFunction(mObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
-                 namespace: Symbol|Expr = None):
+                 namespace: Symbol|Expr = None, record_returned: bool = True):
         self.isclassmethod = isclassmethod(function)
-        super().__init__(function, macro, returned_callback, namespace)
+        super().__init__(function, macro, returned_callback, namespace, record_returned)
         self._method_type = self._make_method_type()
             
     @property
@@ -291,7 +355,6 @@ class mFunction(mObject):
             out = self.obj(*args, **kwargs)
         if self.macro.active:
             expr = Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
-            expr = _assign_value_callback(expr, out)
             line = self.returned_callback(expr, out)
             self.macro.append(line)
             self._last_setval = None
@@ -308,19 +371,16 @@ class mFunction(mObject):
         elif fname == "__call__":
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_call(self.to_namespace(obj), args, kwargs)
-                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__getitem__":
             def make_expr(obj: _O, out, *args):
                 expr = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
-                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__getattr__":
             def make_expr(obj: _O, out, *args):
                 expr = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
-                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         elif fname == "__setitem__":
@@ -362,7 +422,6 @@ class mFunction(mObject):
         else:
             def make_expr(obj: _O, out, *args, **kwargs):
                 expr = Expr.parse_method(self.to_namespace(obj), self.obj, args, kwargs)
-                expr = _assign_value_callback(expr, out)
                 self._last_setval = None
                 return expr
         
@@ -395,8 +454,8 @@ class mFunction(mObject):
 class mProperty(mObject, property):
     obj: property
     def __init__(self, prop: property, macro: Macro, returned_callback: MetaCallable = None,
-                 namespace: Symbol|Expr = None):
-        super().__init__(prop, macro, returned_callback, namespace)
+                 namespace: Symbol|Expr = None, record_returned: bool = True):
+        super().__init__(prop, macro, returned_callback, namespace, record_returned)
         self.obj = self.getter(prop.fget)
     
     def getter(self, fget: Callable[[_O], None]):
@@ -407,9 +466,8 @@ class mProperty(mObject, property):
                 out = fget(obj)
             if self.macro.active:
                 expr = Expr(Head.getattr, [self.to_namespace(obj), key])
-                expr = _assign_value_callback(expr, out)
-                line = self.returned_callback(expr, out)
-                self.macro.append(line)
+                expr = self.returned_callback(expr, out)
+                self.macro.append(expr)
                 self._last_setval = None
             return out
         return self.obj.getter(getter)
@@ -491,15 +549,14 @@ class mModule(mObject):
                     expr = Expr.parse_init(out, cls, args, kwargs)    
                 else:
                     expr = Expr.parse_method(self.to_namespace(self.obj), attr, args, kwargs)
-                    expr = _assign_value_callback(expr, out)
-                line = self.returned_callback(expr, out)
-                self.macro.append(line)
+                expr = self.returned_callback(expr, out)
+                self.macro.append(expr)
                 self._last_setval = None
             return out
         return mfunc
     
 
-def _assign_value_callback(expr: Expr, out: Any):
+def _assign_value(expr: Expr, out: Any):
     out_sym = symbol(out, constant=False)
     if expr.head not in EXEC:
         expr_assign = Expr(Head.assign, [out_sym, expr])

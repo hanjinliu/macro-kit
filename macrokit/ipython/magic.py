@@ -24,6 +24,29 @@ def register_magic(func: Callable[[Expr], Expr]):
     -------
     Callable
         Registered function itself.
+    
+    Examples
+    --------
+    
+    .. code-block:: python
+
+        @register_magic
+        def print_code(expr):
+            print(expr)
+            return expr
+    
+    The ``print_code`` magic is registered as an ipython magic.
+    
+    .. code-block:: python
+    
+        %print_code a = 1
+    
+    .. code-block:: python
+    
+        %%print_code
+        def func(a):
+            return a + 1
+        
     """    
     @register_line_cell_magic
     @needs_local_scope

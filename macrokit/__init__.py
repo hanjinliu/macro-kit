@@ -2,13 +2,13 @@ __version__ = "0.3.0dev0"
 
 from .symbol import Symbol, register_type
 from .expression import Expr, Head, symbol
-from .macro import Macro
+from .macro import Macro, MacroFlags, MacroFlagOptions
 from .ast import parse
 from functools import wraps
 
 __all__ = ["Symbol", "Head", "Expr", "Macro",
            "symbol", "register_type", "parse",
-           "blocked", "record", "property", "dump", "get_macro"
+           "blocked", "record", "property", "dump", "get_macro", "set_flags"
            ]
 
 _MACRO = Macro()
@@ -36,8 +36,11 @@ def get_macro(mapping=None) -> str:
         macro = _MACRO
     return str(macro)
 
-def set_flags(flags):
-    # TODO
-    ...
+def set_flags(**flags: MacroFlagOptions):
+    """
+    Set macro flags.
+    """    
+    _MACRO._flags = MacroFlags(**flags)
+    return None
 
 del wraps

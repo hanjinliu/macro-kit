@@ -5,24 +5,17 @@ from collections.abc import MutableSequence
 from importlib import import_module
 from functools import partial, wraps
 import inspect
-from typing import Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar
+from typing import Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar, NamedTuple
 from types import ModuleType
 
+from .ast import parse
 from .expression import Head, Expr, symbol, EXEC
 from .symbol import Symbol
 
-# types
-MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
-Recordable = Union[property, Callable, type, ModuleType]
-_property = property
-_O = TypeVar("_O")
-
 _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__dir__", 
-                   "__init_subclass__", "__subclasshook__")
+                   "__init_subclass__", "__subclasshook__", "__class_getitem__")
 
 _INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotations__")
-
-# TODO: mProperty needs updates, like only record setter.
 
 BINOP_MAP = {
     "__add__": Symbol("+"),
@@ -43,31 +36,49 @@ BINOP_MAP = {
     "__xor__": Symbol("^")
 }
 
-class MacroFlags(TypedDict):
+class MacroFlags(NamedTuple):
+    """
+    This immutable struct gives the infomation of what kind of expressions will be
+    recorded in a macro instance
+    """    
+    Get: bool = True
+    Set: bool = True
+    Delete: bool = True
+    Return: bool = True
+
+# types
+
+MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
+Recordable = Union[property, Callable, type, ModuleType]
+_property = property
+_O = TypeVar("_O")
+_Class = TypeVar("_Class")
+
+class MacroFlagOptions(TypedDict):
     Get: bool
     Set: bool
     Delete: bool
     Return: bool
-
-FLAG_MAP = {
-    "__getitem__": "Get",
-    "__getattr__": "Get",
-    "__setitem__": "Set",
-    "__setattr__": "Set",
-    "__delitem__": "Delete",
-    "__delattr__": "Delete"
-}
 
 class Macro(Expr, MutableSequence[Expr]):
     """
     A special form of an expression with header "block".
     This class behaves in a list-like way and specifically useful for macro recording.
     """    
-    def __init__(self, args: Iterable[Expr] = ()):
+    _FLAG_MAP = {
+        "__getitem__": "Get",
+        "__getattr__": "Get",
+        "__setitem__": "Set",
+        "__setattr__": "Set",
+        "__delitem__": "Delete",
+        "__delattr__": "Delete"
+    }
+    
+    def __init__(self, args: Iterable[Expr] = (), *, flags: MacroFlagOptions = {}):
         super().__init__(head=Head.block, args=args)
         self.active = True
         self._callbacks = []
-        self._flags = MacroFlags(Get=True, Set=True, Delete=True, Return=True)
+        self._flags = MacroFlags(**flags)
     
     @property
     def callbacks(self):
@@ -78,8 +89,11 @@ class Macro(Expr, MutableSequence[Expr]):
         return self._flags
         
     def insert(self, key: int, expr: Expr):
-        if not isinstance(expr, Expr):
+        if isinstance(expr, str):
+            expr = parse(expr)
+        elif not isinstance(expr, Expr):
             raise TypeError("Cannot insert objects to Macro except for Expr objects.")
+        
         self.args.insert(key, expr)
         for callback in self._callbacks:
             callback(expr)
@@ -124,7 +138,7 @@ class Macro(Expr, MutableSequence[Expr]):
     def record(self, obj: ModuleType, *, returned_callback: MetaCallable = None) -> mModule: ...
     
     @overload
-    def record(self, obj: type, *, returned_callback: MetaCallable = None) -> type[MacroMixin]: ...
+    def record(self, obj: _Class, *, returned_callback: MetaCallable = None) -> _Class: ...
     
     @overload
     def record(self, obj: Callable, *, returned_callback: MetaCallable = None) -> mFunction: ...
@@ -146,11 +160,12 @@ class Macro(Expr, MutableSequence[Expr]):
         """        
         kwargs = dict(macro=self, 
                       returned_callback=returned_callback, 
-                      record_returned=self._flags["Return"]
+                      record_returned=self._flags.Return
                       )
         def wrapper(_obj):
             if isinstance(_obj, property):
-                return mProperty(_obj, **kwargs)
+                return mProperty(_obj, macro=self, returned_callback=returned_callback, 
+                                 flags=self.flags._asdict())
             elif isinstance(_obj, ModuleType):
                 return mModule(_obj, **kwargs)
             elif isinstance(_obj, type) and _obj is not type:
@@ -171,8 +186,8 @@ class Macro(Expr, MutableSequence[Expr]):
             if name in _NON_RECORDABLE:
                 continue
             if isinstance(attr, Callable):
-                key = FLAG_MAP.get(name, None)
-                if key is not None and not self._flags[key]:
+                key = self._FLAG_MAP.get(name, "None")
+                if not getattr(self._flags, key, True):
                     continue
                 _dict[name] = self.record(attr, returned_callback=returned_callback)
             if isinstance(attr, property):
@@ -259,7 +274,7 @@ class Macro(Expr, MutableSequence[Expr]):
             out = func(*args, **kwargs)
         if self.active:
             expr = Expr.parse_call(func, args, kwargs)
-            if self._flags["Return"]:
+            if self._flags.Return:
                 expr = _assign_value(expr, out)
             self.append(expr)
             self._last_setval = None
@@ -454,11 +469,14 @@ class mFunction(mObject):
 class mProperty(mObject, property):
     obj: property
     def __init__(self, prop: property, macro: Macro, returned_callback: MetaCallable = None,
-                 namespace: Symbol|Expr = None, record_returned: bool = True):
-        super().__init__(prop, macro, returned_callback, namespace, record_returned)
+                 namespace: Symbol|Expr = None, flags: MacroFlagOptions = {}):
+        self._flags = MacroFlags(**flags)
+        super().__init__(prop, macro, returned_callback, namespace, record_returned=self._flags.Return)
         self.obj = self.getter(prop.fget)
     
-    def getter(self, fget: Callable[[_O], None]):
+    def getter(self, fget: Callable[[_O], None]) -> property:
+        if not self._flags.Get:
+            return self.obj.getter(fget)
         key = Symbol(fget.__name__)
         @wraps(fget)
         def getter(obj):
@@ -472,7 +490,9 @@ class mProperty(mObject, property):
             return out
         return self.obj.getter(getter)
         
-    def setter(self, fset: Callable[[_O, Any], None]):
+    def setter(self, fset: Callable[[_O, Any], None]) -> property:
+        if not self._flags.Set:
+            return self.obj.setter(fset)
         key = Symbol(fset.__name__)
         @wraps(fset)
         def setter(obj, value):
@@ -493,7 +513,9 @@ class mProperty(mObject, property):
         
         return self.obj.setter(setter)
     
-    def deleter(self, fdel: Callable[[_O], None]):
+    def deleter(self, fdel: Callable[[_O], None]) -> property:
+        if not self._flags.Delete:
+            return self.obj.deleter(fdel)
         key = Symbol(fdel.__name__)
         @wraps(fdel)
         def deleter(obj):

@@ -3,7 +3,7 @@ import ast
 import sys
 from functools import singledispatch
 import inspect
-from typing import Callable, Union
+from typing import Callable
 
 from .symbol import Symbol
 from .expression import Expr, Head, symbol

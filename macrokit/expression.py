@@ -258,7 +258,6 @@ class Expr:
         Expression
             Formatted expression.
         """        
-        # TODO: Pass str instead of Symbol should be allowed in certain cases.
         if isinstance(mapping, dict):
             mapping = mapping.items()
         mapping = check_format_mapping(mapping)
@@ -289,7 +288,11 @@ def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol
         k, v = comp
         if isinstance(v, Expr) and v.head in EXEC:
             raise ValueError("Cannot replace a symbol to a non-evaluable expression.")
-        _dict[symbol(k)] = symbol(v)
+        
+        if isinstance(v, str) and not isinstance(k, Symbol):
+            _dict[symbol(k)] = Symbol(v)
+        else:
+            _dict[symbol(k)] = symbol(v)
     return _dict
 
 

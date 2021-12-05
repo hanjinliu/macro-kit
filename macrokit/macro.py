@@ -424,7 +424,7 @@ class mFunction(mCallable):
         self._method_type = self._make_method_type()
             
     def _make_method_type(self):
-        # TODO: wrapper_descriptor is not recorded correctly
+        # TODO: __get__ etc. is not recorded correctly
         fname = getattr(self.obj, "__name__", None)
         if fname == "__init__":
             def make_expr(obj: _O, *args, **kwargs):

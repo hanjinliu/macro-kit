@@ -351,6 +351,8 @@ def symbol(obj: Any, constant: bool = True) -> Symbol:
         seq = f"{objtype.__name__}({obj.start}, {obj.stop}, {obj.step})"
     elif objtype in Symbol._type_map:
         seq = Symbol._type_map[objtype](obj)
+    elif hasattr(obj, "__name__"):
+        seq = Symbol(obj.__name__)
     else:
         for k, func in Symbol._type_map.items():
             if isinstance(obj, k):

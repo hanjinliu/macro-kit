@@ -1,4 +1,4 @@
-__version__ = "0.2.1dev0"
+__version__ = "0.3.0dev0"
 
 from .symbol import Symbol, register_type
 from .expression import Expr, Head, symbol
@@ -29,7 +29,15 @@ def property(prop):
 def dump() -> str:
     return _MACRO.dump()
 
-def get_macro() -> str:
-    return str(_MACRO)
+def get_macro(mapping=None) -> str:
+    if mapping:
+        macro = _MACRO.format(mapping)
+    else:
+        macro = _MACRO
+    return str(macro)
+
+def set_flags(flags):
+    # TODO
+    ...
 
 del wraps

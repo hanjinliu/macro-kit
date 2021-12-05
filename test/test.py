@@ -35,7 +35,7 @@ def test_module():
     macro = Macro()
     skimage = macro.record(skimage)
     np = macro.record(np)
-    img = np.random.normal(size=(128,128))
+    img = np.random.normal(size=(128, 128))
     out = skimage.filters.gaussian(img, sigma=2)
     thr = skimage.filters.threshold_otsu(out)
     assert str(macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])) == \
@@ -44,7 +44,6 @@ def test_module():
         "thr = skimage.filters.threshold_otsu(out)"
 
 def test_format():
-    from macrokit import Macro
     macro = Macro()
 
     @macro.record
@@ -57,3 +56,50 @@ def test_format():
     assert macro_str == \
         "X = str_add(1, 2)\n" \
         "Y = str_add(X, 'xyz')"
+
+def test_class():
+    macro = Macro(flags={"Return": False})
+    @macro.record
+    class A:
+        clsvar = 0
+        def __init__(self, value: int):
+            self.value = value
+        
+        @property
+        def value_str(self):
+            return str(self.value)
+        
+        @value_str.setter
+        def value_str(self, value: str):
+            self.value = int(value)
+        
+        def getval(self):
+            return self.value
+        
+        @classmethod
+        def set_class_var(cls, v):
+            cls.clsvar = v
+        
+        def __getitem__(self, k):
+            return k
+        
+        def __setitem__(self, k, v):
+            return
+    
+    a = A(4)
+    assert a.value_str == "4"
+    a.value_str = 5
+    assert a.getval() == 5
+    A.set_class_var(10)
+    assert a["key"] == "key"
+    a["a"] = True
+    
+    macro_str = str(macro.format([(a, Symbol("a"))]))
+    assert macro_str == \
+        "a = A(4)\n" \
+        "a.value_str\n" \
+        "a.value_str = 5\n" \
+        "a.getval()\n" \
+        "A.set_class_var(10)\n"\
+        "a['key']\n" \
+        "a['a'] = True"

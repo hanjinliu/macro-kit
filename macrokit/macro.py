@@ -51,6 +51,7 @@ class MacroFlags(NamedTuple):
 MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
 Recordable = Union[property, Callable, type, ModuleType]
 _property = property
+_classmethod = classmethod
 _O = TypeVar("_O")
 _Class = TypeVar("_Class")
 
@@ -171,7 +172,10 @@ class Macro(Expr, MutableSequence[Expr]):
             elif isinstance(_obj, type) and _obj is not type:
                 return self._record_methods(_obj, returned_callback=returned_callback)
             elif isinstance(_obj, Callable) and not isinstance(_obj, mObject):
-                return mFunction(_obj, **kwargs)
+                if not isclassmethod(_obj):
+                    return mFunction(_obj, **kwargs)
+                else:
+                    return mClassMethod(_obj, **kwargs)
             elif isinstance(_obj, mObject):
                 return type(_obj)(_obj.obj, **kwargs)
             else:
@@ -220,6 +224,9 @@ class Macro(Expr, MutableSequence[Expr]):
             Macro-recordable property object.
         """
         return self.record(property(prop))
+    
+    def classmethod(self, method: _classmethod):
+        return self.record(classmethod(method))
     
     def optimize(self, inplace=False) -> Macro:
         """
@@ -350,21 +357,19 @@ class mObject:
 
 Symbol.register_type(mObject, lambda o: symbol(o.obj))
 
-class mFunction(mObject):
+class mCallable(mObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None, record_returned: bool = True):
-        self.isclassmethod = isclassmethod(function)
         super().__init__(function, macro, returned_callback, namespace, record_returned)
-        self._method_type = self._make_method_type()
-            
+    
     @property
     def __signature__(self):
         if hasattr(self.obj, "__signature__"):
             return self.obj.__signature__
         else:
             return inspect.signature(self.obj)
-            
+    
     def __call__(self, *args, **kwargs):
         with self.macro.blocked():
             out = self.obj(*args, **kwargs)
@@ -375,31 +380,37 @@ class mFunction(mObject):
             self._last_setval = None
         return out
     
+class mFunction(mCallable):
+    def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
+                 namespace: Symbol|Expr = None, record_returned: bool = True):
+        super().__init__(function, macro, returned_callback, namespace, record_returned)
+        self._method_type = self._make_method_type()
+            
     def _make_method_type(self):
         # TODO: wrapper_descriptor is not recorded correctly
         fname = getattr(self.obj, "__name__", None)
         if fname == "__init__":
-            def make_expr(obj: _O, out, *args, **kwargs):
+            def make_expr(obj: _O, *args, **kwargs):
                 expr = Expr.parse_init(self.to_namespace(obj), obj.__class__, args, kwargs)
                 self._last_setval = None
                 return expr
         elif fname == "__call__":
-            def make_expr(obj: _O, out, *args, **kwargs):
+            def make_expr(obj: _O, *args, **kwargs):
                 expr = Expr.parse_call(self.to_namespace(obj), args, kwargs)
                 self._last_setval = None
                 return expr
         elif fname == "__getitem__":
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 expr = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
                 self._last_setval = None
                 return expr
         elif fname == "__getattr__":
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 expr = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
                 self._last_setval = None
                 return expr
         elif fname == "__setitem__":
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 target = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.assign, [target, args[1]])
                 if self._last_setval == target:
@@ -408,7 +419,7 @@ class mFunction(mObject):
                     self._last_setval = target
                 return expr
         elif fname == "__setattr__":
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 target = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
                 expr = Expr(Head.assign, [target, args[1]])
                 if self._last_setval == target:
@@ -417,25 +428,25 @@ class mFunction(mObject):
                     self._last_setval = target
                 return expr
         elif fname == "__delitem__":
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 target = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.del_, [target])
                 self._last_setval = None
                 return expr
         elif fname == "__delattr__":
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 target = Expr(Head.getattr, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.del_, [target])
                 self._last_setval = None
                 return expr
         elif fname in BINOP_MAP.keys():
             op = BINOP_MAP[fname]
-            def make_expr(obj: _O, out, *args):
+            def make_expr(obj: _O, *args):
                 expr = Expr(Head.binop, [op, self.to_namespace(obj), args[0]])
                 self._last_setval = None
                 return expr
         else:
-            def make_expr(obj: _O, out, *args, **kwargs):
+            def make_expr(obj: _O, *args, **kwargs):
                 expr = Expr.parse_method(self.to_namespace(obj), self.obj, args, kwargs)
                 self._last_setval = None
                 return expr
@@ -443,12 +454,9 @@ class mFunction(mObject):
         @wraps(self.obj)
         def method(obj: _O, *args, **kwargs):
             with self.macro.blocked():
-                if self.isclassmethod:
-                    out = self.obj(*args, **kwargs)
-                else:
-                    out = self.obj(obj, *args, **kwargs)
+                out = self.obj(obj, *args, **kwargs)
             if self.macro.active:
-                expr = make_expr(obj, out, *args, **kwargs)
+                expr = make_expr(obj, *args, **kwargs)
                 if expr is not None:
                     line = self.returned_callback(expr, out)
                 self.macro.append(line)
@@ -464,7 +472,23 @@ class mFunction(mObject):
         if obj is None:
             return self.obj
         else:
-            return partial(self._method_type, obj)
+            return mMethod(self._method_type, obj)
+
+class mMethod(partial, mCallable):
+    pass
+
+class mClassMethod(mCallable): # TODO: inherit classmethod class if possible
+    def __init__(self, function: classmethod, macro: Macro, returned_callback: MetaCallable = None, 
+                 namespace: Symbol | Expr = None, record_returned: bool = True):
+        super().__init__(function, macro, returned_callback, namespace, record_returned)
+        self.__self__ = function.__self__
+        clsname = Symbol(self.__self__.__name__)
+        # TODO: check namespace in MacroMixin
+        if self.namespace is None:
+            self.namespace = Symbol(self.__self__.__name__)
+        else:
+            self.namespace = Expr(Head.getattr, [self.namespace, clsname])
+        
         
 class mProperty(mObject, property):
     obj: property

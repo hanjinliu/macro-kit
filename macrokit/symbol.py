@@ -3,7 +3,7 @@ import inspect
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Any, TypeVar
-from types import FunctionType, BuiltinFunctionType, ModuleType
+from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")
 
@@ -15,6 +15,7 @@ class Symbol:
         type: lambda e: e.__name__,
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,
+        MethodType: lambda e: e.__name__,
         ModuleType: lambda e: e.__name__.split(".")[-1],
         Enum: lambda e: repr(str(e.name)),
         Path: lambda e: f"r'{e}'",

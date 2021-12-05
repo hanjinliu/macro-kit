@@ -82,13 +82,21 @@ class Symbol:
         return None
     
     @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], str|Symbol]):
+    def register_type(cls, type: type[T], function: Callable[[T], str|Symbol] = None):
         """
         Dispatch value into string in a certain rule.
         
         .. code-block:: python
         
             register_type(np.ndarray, lambda arr: str(arr.tolist()))
+        
+        or
+        
+        .. code-block:: python
+        
+            @register_type(np.ndarray)
+            def _(arr):
+                return str(arr.tolist())        
 
         Parameters
         ----------
@@ -97,12 +105,14 @@ class Symbol:
         function : callable
             Conversion rule
         """    
-        if not callable(function):
-            raise TypeError("The second argument must be callable.")
-        cls._type_map[type] = function
+        def _register(func):
+            if not callable(func):
+                raise TypeError("The second argument must be callable.")
+            cls._type_map[type] = func
+        return _register if function is None else _register(function)
         
 @wraps(Symbol.register_type)
-def register_type(type: type[T], function: Callable[[T], str|Symbol]):
+def register_type(type: type[T], function: Callable[[T], str|Symbol] = None):
     return Symbol.register_type(type, function)
 
 del wraps

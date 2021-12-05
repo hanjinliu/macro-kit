@@ -50,8 +50,6 @@ class MacroFlags(NamedTuple):
 
 MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
 Recordable = Union[property, Callable, type, ModuleType]
-_property = property
-_classmethod = classmethod
 _O = TypeVar("_O")
 _Class = TypeVar("_Class")
 
@@ -60,6 +58,8 @@ class MacroFlagOptions(TypedDict):
     Set: bool
     Delete: bool
     Return: bool
+
+# classes
 
 class Macro(Expr, MutableSequence[Expr]):
     """
@@ -83,13 +83,29 @@ class Macro(Expr, MutableSequence[Expr]):
     
     @property
     def callbacks(self):
+        """
+        Callback functions when a new macro is recorded.
+        """        
         return self._callbacks
     
     @property
     def flags(self):
+        """
+        Flags that determine what kind of expression will be recorded.
+        """        
         return self._flags
         
-    def insert(self, key: int, expr: Expr):
+    def insert(self, key: int, expr: Expr | str):
+        """
+        Insert expressiong to macro.
+
+        Parameters
+        ----------
+        key : int
+            Position to insert.
+        expr : Expr
+            Expression. If a string is given, it will be parsed to Expr object.
+        """        
         if isinstance(expr, str):
             expr = parse(expr)
         elif not isinstance(expr, Expr):
@@ -133,7 +149,7 @@ class Macro(Expr, MutableSequence[Expr]):
             self.active = was_active
     
     @overload
-    def record(self, obj: _property, *, returned_callback: MetaCallable = None) -> mProperty: ...
+    def record(self, obj: property, *, returned_callback: MetaCallable = None) -> mProperty: ...
     
     @overload
     def record(self, obj: ModuleType, *, returned_callback: MetaCallable = None) -> mModule: ...
@@ -145,7 +161,7 @@ class Macro(Expr, MutableSequence[Expr]):
     def record(self, obj: Callable, *, returned_callback: MetaCallable = None) -> mFunction: ...
     
     @overload
-    def record(self, *, returned_callback: MetaCallable = None) -> Callable[[Recordable], mObject|MacroMixin]: ...
+    def record(self, *, returned_callback: MetaCallable = None) -> Callable[[Recordable], mObject | MacroMixin]: ...
     
     def record(self, obj = None, *, returned_callback = None):
         """
@@ -197,7 +213,7 @@ class Macro(Expr, MutableSequence[Expr]):
             if isinstance(attr, property):
                 _dict[name] = self.record(attr, returned_callback=returned_callback)
             elif isinstance(attr, MacroMixin):
-                update_namespace(attr)
+                update_namespace(attr, Symbol(cls))
                 _dict[name] = attr
             else:
                 try:
@@ -225,8 +241,24 @@ class Macro(Expr, MutableSequence[Expr]):
         """
         return self.record(property(prop))
     
-    def classmethod(self, method: _classmethod):
+    def classmethod(self, method: Callable):
+        """
+        Make a macro-recordable property similar to ``@classmethod``.
+
+        Parameters
+        ----------
+        method : callable
+            Function that will be a classmethod.
+
+        Returns
+        -------
+        mClassMethod
+            Macro-recordable classmethod object.
+        """
         return self.record(classmethod(method))
+    
+    def staticmethod(self, method: Callable):
+        return self.record(staticmethod(method))
     
     def optimize(self, inplace=False) -> Macro:
         """
@@ -266,8 +298,7 @@ class Macro(Expr, MutableSequence[Expr]):
                 self[i] = self[i].args[1]
                 
         return self
-        
-        
+            
     def call_function(self, func: Callable, *args, **kwargs):
         """
         Call function in macro recording mode.
@@ -311,6 +342,9 @@ def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
             update_namespace(attr, new)
     
 class mObject:
+    """
+    Abstract class for macro recorder equipped objects.
+    """    
     obj: Any
     def __init__(self, obj: Any, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
@@ -381,6 +415,9 @@ class mCallable(mObject):
         return out
     
 class mFunction(mCallable):
+    """
+    Macro recorder equipped functions. Generated functions are also compatible with methods.
+    """
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
@@ -475,9 +512,16 @@ class mFunction(mCallable):
             return mMethod(self._method_type, obj)
 
 class mMethod(partial, mCallable):
+    """
+    Macro recorder equipped method class. Instances are always built by the __get__ method
+    in mFunction instance.
+    """
     pass
 
 class mClassMethod(mCallable): # TODO: inherit classmethod class if possible
+    """
+    Macro recorder equipped classmethod class.
+    """
     def __init__(self, function: classmethod, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol | Expr = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
@@ -485,12 +529,29 @@ class mClassMethod(mCallable): # TODO: inherit classmethod class if possible
         clsname = Symbol(self.__self__.__name__)
         # TODO: check namespace in MacroMixin
         if self.namespace is None:
-            self.namespace = Symbol(self.__self__.__name__)
+            self.namespace = clsname
         else:
             self.namespace = Expr(Head.getattr, [self.namespace, clsname])
+
+class mStaticMethod(mCallable):
+    """
+    Macro recorder equipped staticmethod class.
+    """
+    # TODO: How to determine a method is a staticmethod??
+    def __init__(self, function: staticmethod, macro: Macro, returned_callback: MetaCallable = None, 
+                 namespace: Symbol | Expr = None, record_returned: bool = True):
+        super().__init__(function, macro, returned_callback, namespace, record_returned)
         
-        
+        clsname = function.__qualname__.split(".")[-2]
+        if self.namespace is None:
+            self.namespace = Symbol(clsname)
+        else:
+            self.namespace = Expr(Head.getattr, [self.namespace, clsname])
+            
 class mProperty(mObject, property):
+    """
+    Macro recorder equipped property class.
+    """
     obj: property
     def __init__(self, prop: property, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None, flags: MacroFlagOptions = {}):
@@ -568,6 +629,9 @@ class mProperty(mObject, property):
         return self.obj.__delete__(obj)
     
 class mModule(mObject):
+    """
+    Macro recorder equipped module class.
+    """
     obj: ModuleType
     def __getattr__(self, key: str):
         try:

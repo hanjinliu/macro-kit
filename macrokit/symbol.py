@@ -1,7 +1,6 @@
 from __future__ import annotations
+from functools import wraps
 import inspect
-from enum import Enum
-from pathlib import Path
 from typing import Callable, Any, TypeVar
 from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
@@ -17,8 +16,6 @@ class Symbol:
         BuiltinFunctionType: lambda e: e.__name__,
         MethodType: lambda e: e.__name__,
         ModuleType: lambda e: e.__name__.split(".")[-1],
-        Enum: lambda e: repr(str(e.name)),
-        Path: lambda e: f"r'{e}'",
         type(None): lambda e: "None",
     }
     
@@ -86,11 +83,26 @@ class Symbol:
     
     @classmethod
     def register_type(cls, type: type[T], function: Callable[[T], str|Symbol]):
+        """
+        Dispatch value into string in a certain rule.
+        
+        .. code-block:: python
+        
+            register_type(np.ndarray, lambda arr: str(arr.tolist()))
+
+        Parameters
+        ----------
+        type : type
+            Type of value.
+        function : callable
+            Conversion rule
+        """    
         if not callable(function):
             raise TypeError("The second argument must be callable.")
         cls._type_map[type] = function
         
-
+@wraps(Symbol.register_type)
 def register_type(type: type[T], function: Callable[[T], str|Symbol]):
     return Symbol.register_type(type, function)
-        
+
+del wraps

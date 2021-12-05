@@ -93,6 +93,7 @@ def test_class():
     A.set_class_var(10)
     assert a["key"] == "key"
     a["a"] = True
+    hash(a)
     
     macro_str = str(macro.format([(a, Symbol("a"))]))
     assert macro_str == \
@@ -102,4 +103,21 @@ def test_class():
         "a.getval()\n" \
         "A.set_class_var(10)\n"\
         "a['key']\n" \
-        "a['a'] = True"
+        "a['a'] = True\n" \
+        "a.__hash__()"
+
+def test_register_type():
+    from macrokit import register_type
+    import numpy as np
+    
+    macro = Macro()
+    
+    register_type(np.ndarray, lambda arr: str(arr.tolist()))
+    
+    @macro.record
+    def double(arr: np.ndarray):
+        return arr*2
+    
+    out = double(np.arange(3))
+    macro_str = str(macro.format([(out, Symbol("out"))]))
+    assert macro_str == "out = double([0, 1, 2])"

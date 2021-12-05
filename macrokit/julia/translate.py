@@ -3,6 +3,8 @@ from typing import Any, Iterable, Callable
 from ..expression import Expr, Head
 from ..ast import parse
 
+# TODO: mapping of builtin
+
 def as_str(expr: Any, indent: int = 0):
     if isinstance(expr, Expr):
         return _STR_MAP[expr.head](expr, indent)

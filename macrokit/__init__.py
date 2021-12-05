@@ -11,6 +11,8 @@ __all__ = ["Symbol", "Head", "Expr", "Macro",
            "blocked", "record", "property", "dump", "get_macro", "set_flags"
            ]
 
+# global macro instance and its functions
+
 _MACRO = Macro()
 
 @wraps(_MACRO.blocked)

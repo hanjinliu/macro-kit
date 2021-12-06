@@ -47,11 +47,20 @@ def _single_arg(args):
     return args
 
 @validator.register(Head.assert_)
-@validator.register(Head.getattr)
 @validator.register(Head.getitem)
 def _two_args(args):
     if len(args) != 2:
         raise ValidationError()
+    return args
+
+@validator.register(Head.getattr)
+def _getattr(args):
+    if len(args) != 2:
+        raise ValidationError()
+    k = args[1]
+    if isinstance(k, Symbol) and k.type is str:
+        k.name = k.name.strip("'")
+        k.type = Any
     return args
 
 @validator.register(Head.assign)

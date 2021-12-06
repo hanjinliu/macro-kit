@@ -6,8 +6,6 @@ from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")
 
-# TODO: method of making identical Symbols from string. Maybe using hash(str)?
-
 class Symbol:
     # Map of how to convert object into a symbol.
     _type_map: dict[type, Callable[[Any], str]] = {
@@ -53,18 +51,21 @@ class Symbol:
     def __eq__(self, other: Symbol) -> bool:
         if not isinstance(other, Symbol):
             raise TypeError(f"'==' is not supported between Symbol and {type(other)}")
-        return self.object_id == other.object_id
+        return (self.object_id == other.object_id and 
+                self.constant == other.constant and
+                self.type is other.type)
     
     @classmethod
-    def var(cls, identifier: str, type: type):
-        
-        # TODO: Need tests.
-        # _variables: set[int] -> dict[str, Symbol]
-        # constant -> property
-        if not identifier.isidentifier():
+    def var(cls, identifier: str, type: type = object):
+        """
+        Make a variable symbol. Same indentifier with same type always returns identical symbol.
+        """        
+        if not isinstance(identifier, str):
+            raise TypeError("'identifier' must be str")
+        elif not identifier.isidentifier():
             raise ValueError(f"'{identifier}' is not a valid identifier.")
         self = cls(identifier, 0, type)
-        self.object_id = id(self)
+        self.object_id = hash(identifier)
         self.constant = False
         return self
     

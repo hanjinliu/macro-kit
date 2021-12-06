@@ -22,6 +22,7 @@ BINOP_MAP = {
     "__sub__": Symbol("-"),
     "__mul__": Symbol("*"),
     "__div__": Symbol("/"),
+    "__mod__": Symbol("%"),
     "__eq__": Symbol("=="),
     "__neq__": Symbol("!="),
     "__gt__": Symbol(">"),
@@ -175,6 +176,7 @@ class Macro(Expr, MutableSequence[Expr]):
             A function that will called after new expression is appended. Must take an expression
             or an expression with the last returned value as inputs.
         """        
+        # TODO: record called twice
         kwargs = dict(macro=self, 
                       returned_callback=returned_callback, 
                       record_returned=self._flags.Return
@@ -405,6 +407,7 @@ class mCallable(mObject):
             return inspect.signature(self.obj)
     
     def __call__(self, *args, **kwargs):
+        # TODO: This function will be called if __get__ method is the origin, like A.__get__(...).
         with self.macro.blocked():
             out = self.obj(*args, **kwargs)
         if self.macro.active:
@@ -424,7 +427,6 @@ class mFunction(mCallable):
         self._method_type = self._make_method_type()
             
     def _make_method_type(self):
-        # TODO: __get__ etc. is not recorded correctly
         fname = getattr(self.obj, "__name__", None)
         if fname == "__init__":
             def make_expr(obj: _O, *args, **kwargs):

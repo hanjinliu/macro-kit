@@ -13,6 +13,7 @@ AST_BINOP_MAP = {
     ast.Sub: Symbol("-"),
     ast.Mult: Symbol("*"),
     ast.Div: Symbol("/"),
+    ast.Mod: Symbol("%"),
     ast.Eq: Symbol("=="),
     ast.NotEq: Symbol("!="),
     ast.Gt: Symbol(">"),

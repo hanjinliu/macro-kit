@@ -123,7 +123,6 @@ def test_register_type():
     assert macro_str == "out = double([0, 1, 2])"
 
 def test_symbol_var():
-    from macrokit import Symbol
     sym_x = Symbol("x")
     sym_y = Symbol("y")
     var_y0 = Symbol.var("y", str)
@@ -137,3 +136,22 @@ def test_symbol_var():
     assert sym_y != var_y0
     assert var_y0 == var_y1 and var_y1 == var_y2 and var_y2 == var_y3
     assert var_y_int != var_y0
+
+code1 = """
+a = np.arange(12)
+for i in a:
+    print(a)
+    if i % 3 == 0:
+        print("3n")
+"""
+
+code2 = """
+def g(a: int = 4):
+    return a - 1, a + 1
+"""
+
+    
+def test_parsing():
+    from macrokit import parse
+    parse(code1)
+    parse(code2)

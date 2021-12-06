@@ -1,31 +1,10 @@
 from __future__ import annotations
 from copy import deepcopy
 from typing import Callable, Iterable, Iterator, Any, Hashable, overload
-from enum import Enum
 from numbers import Number
 from .symbol import Symbol
-        
-class Head(Enum):
-    empty    = "empty"
-    getattr  = "getattr"
-    getitem  = "getitem"
-    del_     = "del"
-    call     = "call"
-    assign   = "assign"
-    kw       = "kw"
-    comment  = "comment"
-    assert_  = "assert"
-    binop    = "binop"
-    block    = "block"
-    function = "function"
-    return_  = "return"
-    if_      = "if"
-    elif_    = "elif"
-    for_     = "for"
-    annotate = "annotate"
-
-EXEC = (Head.assign, Head.assert_, Head.comment, Head.block, Head.function, Head.return_,
-        Head.if_, Head.elif_, Head.for_)
+from .head import Head, EXEC
+from ._validator import validator
 
 def as_str(expr: Any, indent: int = 0):
     if isinstance(expr, Expr):
@@ -70,7 +49,7 @@ class Expr:
     def __init__(self, head: Head, args: Iterable[Any]):
         self._head = Head(head)
         self._args = list(map(self.__class__.parse_object, args))
-            
+        validator(self._head, self._args)
         self.number = self.__class__.n
         self.__class__.n += 1
     
@@ -152,8 +131,7 @@ class Expr:
     @classmethod
     def parse_method(cls, obj: Any, func: Callable, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Expr:
         """
-        Make a method call expression.
-        Expression: obj.func(*args, **kwargs)
+        Parse ``obj.func(*args, **kwargs)``.
         """
         method = cls(head=Head.getattr, args=[symbol(obj), func])
         inputs = [method] + cls.convert_args(args, kwargs)
@@ -162,9 +140,14 @@ class Expr:
     @classmethod
     def parse_init(cls, 
                    obj: Any,
-                   init_cls: type, 
+                   init_cls: type = None, 
                    args: tuple[Any, ...] = None, 
                    kwargs: dict[str, Any] = None) -> Expr:
+        """
+        Parse ``obj = init_cls(*args, **kwargs)``.
+        """
+        if init_cls is None:
+            init_cls = type(obj)
         if args is None:
             args = ()
         if kwargs is None:
@@ -180,8 +163,7 @@ class Expr:
                    args: tuple[Any, ...] = None, 
                    kwargs: dict[str, Any] = None) -> Expr:
         """
-        Make a function call expression.
-        Expression: func(*args, **kwargs)
+        Parse ``func(*args, **kwargs)``.
         """
         if args is None:
             args = ()
@@ -189,7 +171,23 @@ class Expr:
             kwargs = {}
         inputs = [func] + cls.convert_args(args, kwargs)
         return cls(head=Head.call, args=inputs)
-        
+    
+    @classmethod
+    def parse_setitem(cls, obj, key, value) -> Expr:
+        """
+        Parse ``obj[key] = value)``.
+        """
+        target = cls(Head.getitem, [symbol(obj), Symbol(key)])
+        return cls(Head.assign, [target, symbol(value)])
+    
+    @classmethod
+    def parse_setattr(cls, obj, key, value) -> Expr:
+        """
+        Parse ``obj.key = value``.
+        """
+        target = cls(Head.getattr, [symbol(obj), Symbol(key)])
+        return cls(Head.assign, [target, symbol(value)])
+    
     @classmethod
     def convert_args(cls, args: tuple[Any, ...], kwargs: dict[str|Symbol, Any]) -> list:
         inputs = []
@@ -203,6 +201,20 @@ class Expr:
     @classmethod
     def parse_object(cls, a: Any) -> Symbol | Expr:
         return a if isinstance(a, cls) else symbol(a)
+    
+    def issetattr(self) -> bool:
+        if self.head == Head.assign:
+            target = self.args[0]
+            if isinstance(target, Expr) and target.head == Head.getattr:
+                return True
+        return False
+    
+    def issetitem(self) -> bool:
+        if self.head == Head.assign:
+            target = self.args[0]
+            if isinstance(target, Expr) and target.head == Head.getitem:
+                return True
+        return False
     
     def iter_args(self) -> Iterator[Symbol]:
         """
@@ -335,11 +347,11 @@ def symbol(obj: Any, constant: bool = True) -> Symbol:
     elif isinstance(obj, Number): # int, float, bool, ...
         seq = obj
     elif isinstance(obj, tuple):
-        seq = "(" + ", ".join(symbol(a)._name for a in obj) + ")"
+        seq = "(" + ", ".join(str(symbol(a)) for a in obj) + ")"
         if objtype is not tuple:
             seq = objtype.__name__ + seq
     elif isinstance(obj, list):
-        seq = "[" + ", ".join(symbol(a)._name for a in obj) + "]"
+        seq = "[" + ", ".join(str(symbol(a)) for a in obj) + "]"
         if objtype is not list:
             seq = f"{objtype.__name__}({seq})"
     elif isinstance(obj, dict):
@@ -347,7 +359,7 @@ def symbol(obj: Any, constant: bool = True) -> Symbol:
         if objtype is not dict:
             seq = f"{objtype.__name__}({seq})"
     elif isinstance(obj, set):
-        seq = "{" + ", ".join(symbol(a)._name for a in obj) + "}"
+        seq = "{" + ", ".join(str(symbol(a)) for a in obj) + "}"
         if objtype is not set:
             seq = f"{objtype.__name__}({seq})"
     elif isinstance(obj, slice):

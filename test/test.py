@@ -136,17 +136,15 @@ def test_register_type():
 def test_symbol_var():
     sym_x = Symbol("x")
     sym_y = Symbol("y")
-    var_y0 = Symbol.var("y", str)
-    var_y1 = Symbol.var("y", str)
-    var_y2 = Symbol.var("y", str)
-    var_y3 = Symbol.var("y", str)
-    var_y_int = Symbol.var("y", int)
+    var_y0 = Symbol.var("y")
+    var_y1 = Symbol.var("y")
+    var_y2 = Symbol.var("y")
+    var_y3 = Symbol.var("y")
     
     assert sym_x == sym_x
     assert sym_x != sym_y
     assert sym_y != var_y0
     assert var_y0 == var_y1 and var_y1 == var_y2 and var_y2 == var_y3
-    assert var_y_int != var_y0
 
 code1 = """
 a = np.arange(12)

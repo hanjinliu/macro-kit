@@ -71,7 +71,7 @@ class Expr:
     def __str__(self) -> str:
         return as_str(self)
     
-    def __eq__(self, expr: Expr|Symbol) -> bool:
+    def __eq__(self, expr: Expr | Symbol) -> bool:
         if isinstance(expr, self.__class__):
             if self.head == expr.head:
                 return self.args == expr.args
@@ -382,6 +382,6 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
         # The output of register_type can be a Symbol or Expr
         sym = seq
     else:
-        sym = Symbol(seq, obj_id, obj_type)
+        sym = Symbol(seq, obj_id)
         sym.constant = constant
     return sym

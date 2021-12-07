@@ -30,10 +30,9 @@ class Symbol:
     # ID of global variables
     _variables: set[int] = set()
     
-    def __init__(self, seq: str, object_id: int = None, type: type = Any):
+    def __init__(self, seq: str, object_id: int = None):
         self.name = str(seq)
         self.object_id = object_id or id(seq)
-        self.type = type
         self.constant = True
     
     @property
@@ -62,8 +61,7 @@ class Symbol:
         if not isinstance(other, Symbol):
             raise TypeError(f"'==' is not supported between Symbol and {type(other)}")
         return (self.object_id == other.object_id and 
-                self.constant == other.constant and
-                self.type is other.type)
+                self.constant == other.constant)
     
     @classmethod
     def var(cls, identifier: str, type: type = object):
@@ -74,7 +72,7 @@ class Symbol:
             raise TypeError("'identifier' must be str")
         elif not identifier.isidentifier():
             raise ValueError(f"'{identifier}' is not a valid identifier.")
-        self = cls(identifier, 0, type)
+        self = cls(identifier, 0)
         self.object_id = hash(identifier)
         self.constant = False
         return self
@@ -82,13 +80,11 @@ class Symbol:
     def as_parameter(self, default=inspect._empty):
         return inspect.Parameter(self._name, 
                                  inspect.Parameter.POSITIONAL_OR_KEYWORD, 
-                                 default=default,
-                                 annotation=self.type)
+                                 default=default)
     
     def replace(self, other: Symbol) -> None:
         self.name = other.name
         self.object_id = other.object_id
-        self.type = other.type
         self.constant = other.constant
         return None
     

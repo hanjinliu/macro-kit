@@ -19,34 +19,34 @@ _INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotati
 
 
 BINOP_MAP = {
-    "__add__": Symbol("+", type=Operator),
-    "__sub__": Symbol("-", type=Operator),
-    "__mul__": Symbol("*", type=Operator),
-    "__div__": Symbol("/", type=Operator),
-    "__mod__": Symbol("%", type=Operator),
-    "__eq__": Symbol("==", type=Operator),
-    "__neq__": Symbol("!=", type=Operator),
-    "__gt__": Symbol(">", type=Operator),
-    "__ge__": Symbol(">=", type=Operator),
-    "__lt__": Symbol("<", type=Operator),
-    "__le__": Symbol("<=", type=Operator),
-    "__pow__": Symbol("**", type=Operator),
-    "__matmul__": Symbol("@", type=Operator),
-    "__floordiv__": Symbol("//", type=Operator),
-    "__and__": Symbol("&", type=Operator),
-    "__or__": Symbol("|", type=Operator),
-    "__xor__": Symbol("^", type=Operator)
+    "__add__": Symbol("+"),
+    "__sub__": Symbol("-"),
+    "__mul__": Symbol("*"),
+    "__div__": Symbol("/"),
+    "__mod__": Symbol("%"),
+    "__eq__": Symbol("=="),
+    "__neq__": Symbol("!="),
+    "__gt__": Symbol(">"),
+    "__ge__": Symbol(">="),
+    "__lt__": Symbol("<"),
+    "__le__": Symbol("<="),
+    "__pow__": Symbol("**"),
+    "__matmul__": Symbol("@"),
+    "__floordiv__": Symbol("//"),
+    "__and__": Symbol("&"),
+    "__or__": Symbol("|"),
+    "__xor__": Symbol("^")
 }
 
 BUILTIN_MAP = {
-    "__hash__": Symbol("hash", type=Callable),
-    "__len__": Symbol("len", type=Callable),
-    "__str__": Symbol("str", type=Callable),
-    "__repr__": Symbol("repr", type=Callable),
-    "__bool__": Symbol("bool", type=Callable),
-    "__float__": Symbol("float", type=Callable),
-    "__int__": Symbol("int", type=Callable),
-    "__format__": Symbol("format", type=Callable),
+    "__hash__": Symbol("hash"),
+    "__len__": Symbol("len"),
+    "__str__": Symbol("str"),
+    "__repr__": Symbol("repr"),
+    "__bool__": Symbol("bool"),
+    "__float__": Symbol("float"),
+    "__int__": Symbol("int"),
+    "__format__": Symbol("format"),
 }
 
 class MacroFlags(NamedTuple):

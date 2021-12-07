@@ -12,29 +12,29 @@ Operator = NewType("Operator", type)
 NoneType = type(None)
 
 AST_BINOP_MAP = {
-    ast.Add: Symbol("+", type=Operator),
-    ast.Sub: Symbol("-", type=Operator),
-    ast.Mult: Symbol("*", type=Operator),
-    ast.Div: Symbol("/", type=Operator),
-    ast.Mod: Symbol("%", type=Operator),
-    ast.Eq: Symbol("==", type=Operator),
-    ast.NotEq: Symbol("!=", type=Operator),
-    ast.Gt: Symbol(">", type=Operator),
-    ast.GtE: Symbol(">=", type=Operator),
-    ast.Lt: Symbol("<", type=Operator),
-    ast.LtE: Symbol("<=", type=Operator),
-    ast.Is: Symbol("is", type=Operator),
-    ast.IsNot: Symbol("is not", type=Operator),
-    ast.In: Symbol("in", type=Operator),
-    ast.NotIn: Symbol("not in", type=Operator),
-    ast.Pow: Symbol("**", type=Operator),
-    ast.MatMult: Symbol("@", type=Operator),
-    ast.FloorDiv: Symbol("//", type=Operator),
-    ast.BitAnd: Symbol("&", type=Operator),
-    ast.BitOr: Symbol("|", type=Operator),
-    ast.BitXor: Symbol("^", type=Operator),
-    ast.And: Symbol("and", type=Operator),
-    ast.Or: Symbol("or", type=Operator),
+    ast.Add: Symbol("+"),
+    ast.Sub: Symbol("-"),
+    ast.Mult: Symbol("*"),
+    ast.Div: Symbol("/"),
+    ast.Mod: Symbol("%"),
+    ast.Eq: Symbol("=="),
+    ast.NotEq: Symbol("!="),
+    ast.Gt: Symbol(">"),
+    ast.GtE: Symbol(">="),
+    ast.Lt: Symbol("<"),
+    ast.LtE: Symbol("<="),
+    ast.Is: Symbol("is"),
+    ast.IsNot: Symbol("is not"),
+    ast.In: Symbol("in"),
+    ast.NotIn: Symbol("not in"),
+    ast.Pow: Symbol("**"),
+    ast.MatMult: Symbol("@"),
+    ast.FloorDiv: Symbol("//"),
+    ast.BitAnd: Symbol("&"),
+    ast.BitOr: Symbol("|"),
+    ast.BitXor: Symbol("^"),
+    ast.And: Symbol("and"),
+    ast.Or: Symbol("or"),
 }
 
 def parse(source: str | Callable) -> Expr | Symbol:
@@ -67,7 +67,7 @@ def _(ast_object: ast.Expr):
     return from_ast(ast_object.value)
 
 
-if sys.version_info[:2] <= (3, 7):
+if sys.version_info <= (3, 7):
     @from_ast.register
     def _(ast_object: ast.Num):
         return symbol(ast_object.n)

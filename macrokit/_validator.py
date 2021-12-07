@@ -61,9 +61,8 @@ def _getattr(args):
     if len(args) != 2:
         raise ValidationError()
     k = args[1]
-    if isinstance(k, Symbol) and k.type is str:
+    if isinstance(k, Symbol):
         k.name = k.name.strip("'")
-        k.type = Any
     return args
 
 @validator.register(Head.assign)
@@ -76,7 +75,7 @@ def _symbol_and_any(args):
     if isinstance(k, str):
         k = Symbol.var(k)
     elif isinstance(k, Symbol) and k.constant:
-        k = Symbol.var(k.name, type=k.type)
+        k = Symbol.var(k.name)
     return [k, v]
 
 @validator.register(Head.binop)

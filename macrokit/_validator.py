@@ -43,10 +43,18 @@ def _(args):
     return args
 
 @validator.register(Head.del_)
-@validator.register(Head.comment)
 def _single_arg(args):
     if len(args) != 1:
         raise ValidationError()
+    return args
+
+@validator.register(Head.comment)
+def _single_str(args):
+    if len(args) != 1:
+        raise ValidationError()
+    k = args[0]
+    if isinstance(k, Symbol):
+        k.name = k.name.strip("'")
     return args
 
 @validator.register(Head.assert_)

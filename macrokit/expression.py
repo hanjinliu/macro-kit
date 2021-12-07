@@ -338,40 +338,41 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
     if isinstance(obj, (Symbol, Expr)):
         return obj
         
-    objtype = type(obj)
-    if not constant or id(obj) in Symbol._variables:
+    obj_type = type(obj)
+    obj_id = id(obj)
+    if not constant or obj_id in Symbol._variables:
         seq = make_symbol_str(obj)
         constant = False
-    elif isinstance(obj, str):
-        seq = repr(obj)
-    elif isinstance(obj, Number): # int, float, bool, ...
-        seq = obj
+    elif obj_type in Symbol._type_map:
+        seq = Symbol._type_map[obj_type](obj)
+    elif obj_type in Symbol._subclass_map:
+        parent_type = Symbol._subclass_map[obj_type]
+        seq = Symbol._type_map[parent_type](obj)
     elif isinstance(obj, tuple):
         seq = "(" + ", ".join(str(symbol(a)) for a in obj) + ")"
-        if objtype is not tuple:
-            seq = objtype.__name__ + seq
+        if obj_type is not tuple:
+            seq = obj_type.__name__ + seq
     elif isinstance(obj, list):
         seq = "[" + ", ".join(str(symbol(a)) for a in obj) + "]"
-        if objtype is not list:
-            seq = f"{objtype.__name__}({seq})"
+        if obj_type is not list:
+            seq = f"{obj_type.__name__}({seq})"
     elif isinstance(obj, dict):
         seq = "{" + ", ".join(f"{symbol(k)}: {symbol(v)}" for k, v in obj.items()) + "}"
-        if objtype is not dict:
-            seq = f"{objtype.__name__}({seq})"
+        if obj_type is not dict:
+            seq = f"{obj_type.__name__}({seq})"
     elif isinstance(obj, set):
         seq = "{" + ", ".join(str(symbol(a)) for a in obj) + "}"
-        if objtype is not set:
-            seq = f"{objtype.__name__}({seq})"
-    elif isinstance(obj, slice):
-        seq = f"{objtype.__name__}({obj.start}, {obj.stop}, {obj.step})"
-    elif objtype in Symbol._type_map:
-        seq = Symbol._type_map[objtype](obj)
+        if obj_type is not set:
+            seq = f"{obj_type.__name__}({seq})"
+    elif isinstance(obj, Number): # int, float, bool, ...
+        seq = obj
     elif hasattr(obj, "__name__"):
-        seq = Symbol(obj.__name__)
+        seq = obj.__name__
     else:
         for k, func in Symbol._type_map.items():
             if isinstance(obj, k):
                 seq = func(obj)
+                Symbol._subclass_map[obj_type] = k
                 break
         else:
             seq = make_symbol_str(obj)
@@ -381,6 +382,6 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
         # The output of register_type can be a Symbol or Expr
         sym = seq
     else:
-        sym = Symbol(seq, id(obj), type(obj))
+        sym = Symbol(seq, obj_id, obj_type)
         sym.constant = constant
     return sym

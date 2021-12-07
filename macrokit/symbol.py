@@ -15,7 +15,17 @@ class Symbol:
         MethodType: lambda e: e.__name__,
         ModuleType: lambda e: e.__name__.split(".")[-1],
         type(None): lambda e: "None",
+        str: repr,
+        bytes: repr,
+        slice: lambda e: f"slice({e.start}, {e.stop}, {e.step})",
+        int: str,
+        float: str,
+        complex: str,
+        bool: str,
     }
+    
+    # Map to speed up type check
+    _subclass_map: dict[type, type] = {}
     
     # ID of global variables
     _variables: set[int] = set()

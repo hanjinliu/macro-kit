@@ -406,13 +406,28 @@ class mObject:
     def macro(self) -> Macro:
         return self._macro
 
-# Symbol.register_type(mObject, lambda o: symbol(o.obj))
+_GET = Symbol.var("__get__", Callable)
+_SET = Symbol.var("__set__", Callable)
+_DELETE = Symbol.var("__delete__", Callable)
 
 class mCallable(mObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
+        if self.__name__ == "__get__":
+            def make_expr(*args, **kwargs):
+                return Expr.parse_method(args[0], _GET, (args[1], args[2]), {})
+        elif self.__name__ == "__set__":
+            def make_expr(*args, **kwargs):
+                return Expr.parse_method(args[0], _SET, (args[1], args[2]), {})
+        elif self.__name__ == "__delete__":
+            def make_expr(*args, **kwargs):
+                return Expr.parse_method(args[0], _DELETE, (args[1]), {})
+        else:
+            def make_expr(*args, **kwargs):
+                return Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
+        self._make_expr = make_expr
     
     @property
     def __signature__(self):
@@ -426,7 +441,7 @@ class mCallable(mObject):
         with self._macro.blocked():
             out = self.obj(*args, **kwargs)
         if self._macro.active:
-            expr = Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
+            expr = self._make_expr(*args, **kwargs)
             line = self.returned_callback(expr, out)
             self._macro.append(line)
             self._macro._last_setval = None

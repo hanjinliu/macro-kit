@@ -5,11 +5,10 @@ from typing import Callable, Any, TypeVar, overload
 from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")
-F = TypeVar("F", bound=Callable)
 
 class Symbol:
     # Map of how to convert object into a symbol.
-    _type_map: dict[type, F] = {
+    _type_map: dict[type[T], Callable[[T], Any]] = {
         type: lambda e: e.__name__,
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,

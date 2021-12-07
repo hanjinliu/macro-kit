@@ -92,13 +92,15 @@ class Symbol:
     def register_type(cls, function: Callable[[T], Any])-> Callable[[type[T]], type[T]]: ...
     
     @classmethod
-    def register_type(cls, arg, function=None):
+    def register_type(cls, type_or_function, function=None):
         """
-        Dispatch value into string in a certain rule.
+        Define a dispatcher for macro recording.
         
         .. code-block:: python
         
-            register_type(np.ndarray, lambda arr: str(arr.tolist()))
+            register_type(np.ndarray, 
+                          lambda arr: str(arr.tolist())
+                          )
         
         or
         
@@ -106,28 +108,30 @@ class Symbol:
         
             @register_type(np.ndarray)
             def _(arr):
-                return str(arr.tolist())        
-
-        Parameters
-        ----------
-        type : type
-            Type of value.
-        function : callable
-            Conversion rule
+                return str(arr.tolist())
+        
+        or if you defined a new type
+        
+        .. code-block:: python
+        
+            @register_type(lambda t: t.name)
+            class T:
+                ...
+        
         """    
-        if isinstance(arg, type):
+        if isinstance(type_or_function, type):
             def _register(func):
                 if not callable(func):
                     raise TypeError("The second argument must be callable.")
-                cls._type_map[arg] = func
+                cls._type_map[type_or_function] = func
                 return func
             return _register if function is None else _register(function)
         
-        elif isinstance(arg, Callable):
+        elif isinstance(type_or_function, Callable):
             if function is not None:
                 raise TypeError("")
             def _register(type_):
-                cls._type_map[type_] = arg
+                cls._type_map[type_] = type_or_function
                 return type_
             return _register
         

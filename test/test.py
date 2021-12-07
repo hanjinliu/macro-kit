@@ -1,5 +1,4 @@
 import pytest
-from build.lib.macrokit.expression import symbol
 from macrokit import Macro, Expr, Symbol
 
 def test_function():
@@ -108,7 +107,7 @@ def test_class():
         "a['a'] = True"
 
 def test_register_type():
-    from macrokit import register_type
+    from macrokit import register_type, symbol
     import numpy as np
     
     macro = Macro()

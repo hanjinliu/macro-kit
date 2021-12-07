@@ -3,38 +3,39 @@ import ast
 import sys
 from functools import singledispatch
 import inspect
-from typing import Callable
+from typing import Callable, NewType
 
 from .symbol import Symbol
 from .expression import Expr, Head, symbol
 
-AST_BINOP_MAP = {
-    ast.Add: Symbol("+"),
-    ast.Sub: Symbol("-"),
-    ast.Mult: Symbol("*"),
-    ast.Div: Symbol("/"),
-    ast.Mod: Symbol("%"),
-    ast.Eq: Symbol("=="),
-    ast.NotEq: Symbol("!="),
-    ast.Gt: Symbol(">"),
-    ast.GtE: Symbol(">="),
-    ast.Lt: Symbol("<"),
-    ast.LtE: Symbol("<="),
-    ast.Is: Symbol("is"),
-    ast.IsNot: Symbol("is not"),
-    ast.In: Symbol("in"),
-    ast.NotIn: Symbol("not in"),
-    ast.Pow: Symbol("**"),
-    ast.MatMult: Symbol("@"),
-    ast.FloorDiv: Symbol("//"),
-    ast.BitAnd: Symbol("&"),
-    ast.BitOr: Symbol("|"),
-    ast.BitXor: Symbol("^"),
-    ast.And: Symbol("and"),
-    ast.Or: Symbol("or"),
-}
-
+Operator = NewType("Operator", type)
 NoneType = type(None)
+
+AST_BINOP_MAP = {
+    ast.Add: Symbol("+", type=Operator),
+    ast.Sub: Symbol("-", type=Operator),
+    ast.Mult: Symbol("*", type=Operator),
+    ast.Div: Symbol("/", type=Operator),
+    ast.Mod: Symbol("%", type=Operator),
+    ast.Eq: Symbol("==", type=Operator),
+    ast.NotEq: Symbol("!=", type=Operator),
+    ast.Gt: Symbol(">", type=Operator),
+    ast.GtE: Symbol(">=", type=Operator),
+    ast.Lt: Symbol("<", type=Operator),
+    ast.LtE: Symbol("<=", type=Operator),
+    ast.Is: Symbol("is", type=Operator),
+    ast.IsNot: Symbol("is not", type=Operator),
+    ast.In: Symbol("in", type=Operator),
+    ast.NotIn: Symbol("not in", type=Operator),
+    ast.Pow: Symbol("**", type=Operator),
+    ast.MatMult: Symbol("@", type=Operator),
+    ast.FloorDiv: Symbol("//", type=Operator),
+    ast.BitAnd: Symbol("&", type=Operator),
+    ast.BitOr: Symbol("|", type=Operator),
+    ast.BitXor: Symbol("^", type=Operator),
+    ast.And: Symbol("and", type=Operator),
+    ast.Or: Symbol("or", type=Operator),
+}
 
 def parse(source: str | Callable) -> Expr | Symbol:
     """
@@ -182,7 +183,7 @@ def _(ast_object: ast.If):
 @from_ast.register
 def _(ast_object: ast.For):
     head = Head.for_
-    top = Expr(Head.binop, [Symbol("in"), from_ast(ast_object.target), from_ast(ast_object.iter)])
+    top = Expr(Head.binop, [Symbol.var("in", Operator), from_ast(ast_object.target), from_ast(ast_object.iter)])
     block = from_ast(ast_object.body)
     return Expr(head, [top, block])
 
@@ -222,7 +223,7 @@ def _(ast_object: ast.AnnAssign):
 
 @from_ast.register
 def _(ast_object: ast.Pass):
-    return Symbol("pass") # Should it be Expr(Head.pass_, [Symbol("pass")]) ??
+    return Symbol.var("pass") # Should it be Expr(Head.pass_, [Symbol("pass")]) ??
     
 @from_ast.register
 def _(ast_object: ast.Return):

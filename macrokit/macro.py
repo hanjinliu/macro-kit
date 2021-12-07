@@ -8,7 +8,7 @@ import inspect
 from typing import Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar, NamedTuple
 from types import ModuleType
 
-from .ast import parse
+from .ast import parse, Operator
 from .expression import Head, Expr, symbol, EXEC
 from .symbol import Symbol
 
@@ -17,24 +17,36 @@ _NON_RECORDABLE = ("__new__", "__class__", "__repr__", "__getattribute__", "__di
 
 _INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotations__")
 
+
 BINOP_MAP = {
-    "__add__": Symbol("+"),
-    "__sub__": Symbol("-"),
-    "__mul__": Symbol("*"),
-    "__div__": Symbol("/"),
-    "__mod__": Symbol("%"),
-    "__eq__": Symbol("=="),
-    "__neq__": Symbol("!="),
-    "__gt__": Symbol(">"),
-    "__ge__": Symbol(">="),
-    "__lt__": Symbol("<"),
-    "__le__": Symbol("<="),
-    "__pow__": Symbol("**"),
-    "__matmul__": Symbol("@"),
-    "__floordiv__": Symbol("//"),
-    "__and__": Symbol("&"),
-    "__or__": Symbol("|"),
-    "__xor__": Symbol("^")
+    "__add__": Symbol("+", type=Operator),
+    "__sub__": Symbol("-", type=Operator),
+    "__mul__": Symbol("*", type=Operator),
+    "__div__": Symbol("/", type=Operator),
+    "__mod__": Symbol("%", type=Operator),
+    "__eq__": Symbol("==", type=Operator),
+    "__neq__": Symbol("!=", type=Operator),
+    "__gt__": Symbol(">", type=Operator),
+    "__ge__": Symbol(">=", type=Operator),
+    "__lt__": Symbol("<", type=Operator),
+    "__le__": Symbol("<=", type=Operator),
+    "__pow__": Symbol("**", type=Operator),
+    "__matmul__": Symbol("@", type=Operator),
+    "__floordiv__": Symbol("//", type=Operator),
+    "__and__": Symbol("&", type=Operator),
+    "__or__": Symbol("|", type=Operator),
+    "__xor__": Symbol("^", type=Operator)
+}
+
+BUILTIN_MAP = {
+    "__hash__": Symbol("hash", type=Callable),
+    "__len__": Symbol("len", type=Callable),
+    "__str__": Symbol("str", type=Callable),
+    "__repr__": Symbol("repr", type=Callable),
+    "__bool__": Symbol("bool", type=Callable),
+    "__float__": Symbol("float", type=Callable),
+    "__int__": Symbol("int", type=Callable),
+    "__format__": Symbol("format", type=Callable),
 }
 
 class MacroFlags(NamedTuple):
@@ -348,8 +360,7 @@ class mObject:
     """
     Abstract class for macro recorder equipped objects.
     """    
-    obj: Any
-    def __init__(self, obj: Any, macro: Macro, returned_callback: MetaCallable = None, 
+    def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
         self.obj = obj
         
@@ -391,7 +402,7 @@ class mObject:
             return Expr(Head.getattr, [self.namespace, sym])
     
     @property
-    def macro(self):
+    def macro(self) -> Macro:
         return self._macro
 
 Symbol.register_type(mObject, lambda o: symbol(o.obj))
@@ -485,6 +496,12 @@ class mFunction(mCallable):
             op = BINOP_MAP[fname]
             def make_expr(obj: _O, *args):
                 expr = Expr(Head.binop, [op, self.to_namespace(obj), args[0]])
+                self._macro._last_setval = None
+                return expr
+        elif fname in BUILTIN_MAP.keys():
+            f = BUILTIN_MAP[fname]
+            def make_expr(obj: _O, *args):
+                expr = Expr(Head.call, [f, self.to_namespace(obj)] + list(args))
                 self._macro._last_setval = None
                 return expr
         else:

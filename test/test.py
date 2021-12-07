@@ -95,7 +95,6 @@ def test_class():
     assert a["key"] == "key"
     a["a"] = False # This line should not be recorded.
     a["a"] = True
-    hash(a)
     
     macro_str = str(macro.format([(a, Symbol("a"))]))
     assert macro_str == \
@@ -105,8 +104,7 @@ def test_class():
         "a.getval()\n" \
         "A.set_class_var(10)\n"\
         "a['key']\n" \
-        "a['a'] = True\n" \
-        "a.__hash__()"
+        "a['a'] = True"
 
 def test_register_type():
     from macrokit import register_type
@@ -157,3 +155,34 @@ def test_parsing():
     from macrokit import parse
     parse(code1)
     parse(code2)
+
+def test_special_methods():
+    macro = Macro(flags={"Return": False})
+    @macro.record
+    class A:
+        def __len__(self):
+            return 0
+        def __bool__(self):
+            return True
+        def __int__(self):
+            return 0
+        def __float__(self):
+            return 0.0
+        def __str__(self):
+            return ""
+    
+    a = A()
+    len(a)
+    bool(a)
+    int(a)
+    float(a)
+    str(a)
+    
+    macro_str = str(macro.format([(a, Symbol("a"))]))
+    assert macro_str == \
+        "a = A()\n" \
+        "len(a)\n" \
+        "bool(a)\n" \
+        "int(a)\n" \
+        "float(a)\n" \
+        "str(a)"

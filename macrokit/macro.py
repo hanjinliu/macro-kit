@@ -438,7 +438,7 @@ class mFunction(mCallable):
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
-        self._method_type = self._make_method_type()
+        self._method_type = None
             
     def _make_method_type(self):
         fname = getattr(self.obj, "__name__", None)
@@ -531,6 +531,8 @@ class mFunction(mCallable):
         if obj is None:
             return self.obj
         else:
+            if self._method_type is None:
+                self._method_type = self._make_method_type()
             return mMethod(self._method_type, obj)
 
 class mMethod(partial, mCallable):

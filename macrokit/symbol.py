@@ -1,14 +1,15 @@
 from __future__ import annotations
 from functools import wraps
 import inspect
-from typing import Callable, Any, TypeVar
+from typing import Callable, Any, TypeVar, overload
 from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")
+F = TypeVar("F", bound=Callable)
 
 class Symbol:
     # Map of how to convert object into a symbol.
-    _type_map: dict[type, Callable[[Any], str]] = {
+    _type_map: dict[type, F] = {
         type: lambda e: e.__name__,
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,
@@ -82,8 +83,16 @@ class Symbol:
         self.constant = other.constant
         return None
     
+    @overload
     @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], str|Symbol] = None):
+    def register_type(cls, type: type[T]) -> Callable[[Callable[[T], Any]], Callable[[T], Any]]: ...
+    
+    @overload
+    @classmethod
+    def register_type(cls, function: Callable[[T], Any])-> Callable[[type[T]], type[T]]: ...
+    
+    @classmethod
+    def register_type(cls, arg, function=None):
         """
         Dispatch value into string in a certain rule.
         
@@ -106,14 +115,27 @@ class Symbol:
         function : callable
             Conversion rule
         """    
-        def _register(func):
-            if not callable(func):
-                raise TypeError("The second argument must be callable.")
-            cls._type_map[type] = func
-        return _register if function is None else _register(function)
+        if isinstance(arg, type):
+            def _register(func):
+                if not callable(func):
+                    raise TypeError("The second argument must be callable.")
+                cls._type_map[arg] = func
+                return func
+            return _register if function is None else _register(function)
+        
+        elif isinstance(arg, Callable):
+            if function is not None:
+                raise TypeError("")
+            def _register(type_):
+                cls._type_map[type_] = arg
+                return type_
+            return _register
+        
+        else:
+            raise TypeError()
         
 @wraps(Symbol.register_type)
-def register_type(type: type[T], function: Callable[[T], str|Symbol] = None):
-    return Symbol.register_type(type, function)
+def register_type(type_or_function, function = None):
+    return Symbol.register_type(type_or_function, function)
 
 del wraps

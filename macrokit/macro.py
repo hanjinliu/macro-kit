@@ -355,7 +355,8 @@ def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
             attr.namespace = namespace
         elif isinstance(attr, MacroMixin):
             update_namespace(attr, new)
-    
+
+@Symbol.register_type(lambda o: symbol(o.obj))
 class mObject:
     """
     Abstract class for macro recorder equipped objects.
@@ -405,7 +406,7 @@ class mObject:
     def macro(self) -> Macro:
         return self._macro
 
-Symbol.register_type(mObject, lambda o: symbol(o.obj))
+# Symbol.register_type(mObject, lambda o: symbol(o.obj))
 
 class mCallable(mObject):
     obj: Callable

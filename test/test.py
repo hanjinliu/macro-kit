@@ -1,4 +1,5 @@
 import pytest
+from build.lib.macrokit.expression import symbol
 from macrokit import Macro, Expr, Symbol
 
 def test_function():
@@ -121,6 +122,17 @@ def test_register_type():
     out = double(np.arange(3))
     macro_str = str(macro.format([(out, Symbol("out"))]))
     assert macro_str == "out = double([0, 1, 2])"
+    
+    @register_type(np.ndarray)
+    def _(arr: np.ndarray):
+        return f"array{arr.shape}"
+    assert str(symbol(np.zeros((4,6)))) == "array(4, 6)"
+    
+    @register_type(lambda e: e.name)
+    class T:
+        def __init__(self):
+            self.name = "t"
+    assert str(symbol(T())) == "t"
 
 def test_symbol_var():
     sym_x = Symbol("x")

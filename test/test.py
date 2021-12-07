@@ -88,10 +88,12 @@ def test_class():
     
     a = A(4)
     assert a.value_str == "4"
+    a.value_str = 4 # This line should not be recorded.
     a.value_str = 5
     assert a.getval() == 5
     A.set_class_var(10)
     assert a["key"] == "key"
+    a["a"] = False # This line should not be recorded.
     a["a"] = True
     hash(a)
     

@@ -315,9 +315,9 @@ def make_symbol_str(obj: Any):
         Symbol._variables.add(_id)
     return f"var{hex(_id)}"
 
-def symbol(obj: Any, constant: bool = True) -> Symbol:
+def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
     """
-    Make a proper Symbol instance from any objects.
+    Make a proper Symbol or Expr instance from any objects.
     
     Unlike Symbol(...) constructor, which directly make a Symbol from a string, this function
     checks input type and determine the optimal string to represent the object. Especially,
@@ -333,7 +333,7 @@ def symbol(obj: Any, constant: bool = True) -> Symbol:
 
     Returns
     -------
-    Symbol
+    Symbol or Expr
     """    
     if isinstance(obj, (Symbol, Expr)):
         return obj
@@ -377,8 +377,8 @@ def symbol(obj: Any, constant: bool = True) -> Symbol:
             seq = make_symbol_str(obj)
             constant = False
     
-    if isinstance(seq, Symbol):
-        # The output of register_type can be a Symbol
+    if isinstance(seq, (Symbol, Expr)):
+        # The output of register_type can be a Symbol or Expr
         sym = seq
     else:
         sym = Symbol(seq, id(obj), type(obj))

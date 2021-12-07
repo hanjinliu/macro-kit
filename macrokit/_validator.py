@@ -7,6 +7,9 @@ _T = TypeVar("_T", bound=Hashable)
 _A = TypeVar("_A")
 
 class Validator(Generic[_T, _A]):
+    """
+    A validator class that will be used for Expr argument validation.
+    """
     def __init__(self):
         self._map: dict[_T, Callable[[_A], _A]] = {}
     

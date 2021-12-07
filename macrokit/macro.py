@@ -81,6 +81,7 @@ class Macro(Expr, MutableSequence[Expr]):
         self.active = True
         self._callbacks = []
         self._flags = MacroFlags(**flags)
+        self._last_setval: Expr = None
     
     @property
     def callbacks(self):
@@ -374,13 +375,11 @@ class mObject:
             
         self.namespace = namespace
         
-        self.macro = macro
+        self._macro = macro
         for name in _INHERITABLE:
             if hasattr(self.obj, name):
                 setattr(self, name, getattr(self.obj, name))
-        
-        self._last_setval: Expr = None
-    
+            
     def to_namespace(self, obj: Any) -> Symbol | Expr:
         """
         Return the expression of ``obj`` in the correct name space.
@@ -390,6 +389,10 @@ class mObject:
             return sym
         else:
             return Expr(Head.getattr, [self.namespace, sym])
+    
+    @property
+    def macro(self):
+        return self._macro
 
 Symbol.register_type(mObject, lambda o: symbol(o.obj))
 
@@ -408,13 +411,13 @@ class mCallable(mObject):
     
     def __call__(self, *args, **kwargs):
         # TODO: This function will be called if __get__ method is the origin, like A.__get__(...).
-        with self.macro.blocked():
+        with self._macro.blocked():
             out = self.obj(*args, **kwargs)
-        if self.macro.active:
+        if self._macro.active:
             expr = Expr.parse_call(self.to_namespace(self.obj), args, kwargs)
             line = self.returned_callback(expr, out)
-            self.macro.append(line)
-            self._last_setval = None
+            self._macro.append(line)
+            self._macro._last_setval = None
         return out
     
 class mFunction(mCallable):
@@ -431,74 +434,74 @@ class mFunction(mCallable):
         if fname == "__init__":
             def make_expr(obj: _O, *args, **kwargs):
                 expr = Expr.parse_init(self.to_namespace(obj), obj.__class__, args, kwargs)
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         elif fname == "__call__":
             def make_expr(obj: _O, *args, **kwargs):
                 expr = Expr.parse_call(self.to_namespace(obj), args, kwargs)
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         elif fname == "__getitem__":
             def make_expr(obj: _O, *args):
                 expr = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         elif fname == "__getattr__":
             def make_expr(obj: _O, *args):
                 expr = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         elif fname == "__setitem__":
             def make_expr(obj: _O, *args):
                 target = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.assign, [target, args[1]])
-                if self._last_setval == target:
-                    self.macro.pop(-1)
+                if self._macro._last_setval == target:
+                    self._macro.pop(-1)
                 else:
-                    self._last_setval = target
+                    self._macro._last_setval = target
                 return expr
         elif fname == "__setattr__":
             def make_expr(obj: _O, *args):
                 target = Expr(Head.getattr, [self.to_namespace(obj), Symbol(args[0])])
                 expr = Expr(Head.assign, [target, args[1]])
-                if self._last_setval == target:
-                    self.macro.pop(-1)
+                if self._macro._last_setval == target:
+                    self._macro.pop(-1)
                 else:
-                    self._last_setval = target
+                    self._macro._last_setval = target
                 return expr
         elif fname == "__delitem__":
             def make_expr(obj: _O, *args):
                 target = Expr(Head.getitem, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.del_, [target])
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         elif fname == "__delattr__":
             def make_expr(obj: _O, *args):
                 target = Expr(Head.getattr, [self.to_namespace(obj), args[0]])
                 expr = Expr(Head.del_, [target])
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         elif fname in BINOP_MAP.keys():
             op = BINOP_MAP[fname]
             def make_expr(obj: _O, *args):
                 expr = Expr(Head.binop, [op, self.to_namespace(obj), args[0]])
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         else:
             def make_expr(obj: _O, *args, **kwargs):
                 expr = Expr.parse_method(self.to_namespace(obj), self.obj, args, kwargs)
-                self._last_setval = None
+                self._macro._last_setval = None
                 return expr
         
         @wraps(self.obj)
         def method(obj: _O, *args, **kwargs):
-            with self.macro.blocked():
+            with self._macro.blocked():
                 out = self.obj(obj, *args, **kwargs)
-            if self.macro.active:
+            if self._macro.active:
                 expr = make_expr(obj, *args, **kwargs)
                 if expr is not None:
                     line = self.returned_callback(expr, out)
-                self.macro.append(line)
+                self._macro.append(line)
             return out
 
         return method
@@ -567,13 +570,13 @@ class mProperty(mObject, property):
         key = Symbol(fget.__name__)
         @wraps(fget)
         def getter(obj):
-            with self.macro.blocked():
+            with self._macro.blocked():
                 out = fget(obj)
-            if self.macro.active:
+            if self._macro.active:
                 expr = Expr(Head.getattr, [self.to_namespace(obj), key])
                 expr = self.returned_callback(expr, out)
-                self.macro.append(expr)
-                self._last_setval = None
+                self._macro.append(expr)
+                self._macro._last_setval = None
             return out
         return self.obj.getter(getter)
         
@@ -583,18 +586,18 @@ class mProperty(mObject, property):
         key = Symbol(fset.__name__)
         @wraps(fset)
         def setter(obj, value):
-            with self.macro.blocked():
+            with self._macro.blocked():
                 out = fset(obj, value)
-            if self.macro.active:
+            if self._macro.active:
                 target = Expr(Head.getattr, [self.to_namespace(obj), key])
                 expr = Expr(Head.assign, [target, value])
-                if self._last_setval == target:
-                    self.macro.pop(-1)
+                if self._macro._last_setval == target:
+                    self._macro.pop(-1)
                 else:
-                    self._last_setval = target
+                    self._macro._last_setval = target
                 
                 line = self.returned_callback(expr, out)
-                self.macro.append(line)
+                self._macro.append(line)
                     
             return out
         
@@ -606,14 +609,14 @@ class mProperty(mObject, property):
         key = Symbol(fdel.__name__)
         @wraps(fdel)
         def deleter(obj):
-            with self.macro.blocked():
+            with self._macro.blocked():
                 out = fdel(obj)
-            if self.macro.active:
+            if self._macro.active:
                 target = Expr(Head.getattr, [self.to_namespace(obj), key])
                 expr = Expr(Head.del_, [target])
                 line = self.returned_callback(expr, out)
-                self.macro.append(line)
-                self._last_setval = None
+                self._macro.append(line)
+                self._macro._last_setval = None
             return out
         
         return self.obj.deleter(deleter)
@@ -647,23 +650,23 @@ class mModule(mObject):
                 raise ValueError(f"No function or submodule named '{key}'.")
         
         if _type == "module":
-            mmod = mModule(attr, self.macro, self.returned_callback, self.to_namespace(self.obj))
+            mmod = mModule(attr, self._macro, self.returned_callback, self.to_namespace(self.obj))
             setattr(self, key, mmod)
             return mmod
             
         @wraps(attr)
         def mfunc(*args, **kwargs):
-            with self.macro.blocked():
+            with self._macro.blocked():
                 out = attr(*args, **kwargs)
-            if self.macro.active:
+            if self._macro.active:
                 if isinstance(attr, type):
                     cls = Expr(Head.getattr, [self.to_namespace(self.obj), Symbol(out.__class__.__name__)])
                     expr = Expr.parse_init(out, cls, args, kwargs)    
                 else:
                     expr = Expr.parse_method(self.to_namespace(self.obj), attr, args, kwargs)
                 expr = self.returned_callback(expr, out)
-                self.macro.append(expr)
-                self._last_setval = None
+                self._macro.append(expr)
+                self._macro._last_setval = None
             return out
         return mfunc
     

@@ -202,7 +202,18 @@ def _(ast_object: ast.For):
     head = Head.for_
     top = Expr(Head.binop, [Symbol.var("in"), from_ast(ast_object.target), from_ast(ast_object.iter)])
     block = from_ast(ast_object.body)
+    if ast_object.orelse:
+        raise ValueError("'else' block is not supported yet")
     return Expr(head, [top, block])
+
+@from_ast.register
+def _(ast_object: ast.While):
+    head = Head.while_
+    test = from_ast(ast_object.test)
+    block = from_ast(ast_object.body)
+    if ast_object.orelse:
+        raise ValueError("'else' block is not supported yet")
+    return Expr(head, [test, block])
 
 @from_ast.register
 def _(ast_object: list):
@@ -250,11 +261,11 @@ def _(ast_object: ast.Return):
 
 def nest_binop(op, values: list[ast.AST]):
     if len(values) == 2:
-        return [from_ast(op), 
+        return [op, 
                 from_ast(values[0]), 
                 from_ast(values[1])]
     else:
-        return [from_ast(op), 
+        return [op, 
                 from_ast(values[0]), 
                 Expr(Head.binop, nest_binop(op, values[1:]))]
 

@@ -19,6 +19,7 @@ class Head(Enum):
     if_      = "if"
     elif_    = "elif"
     for_     = "for"
+    while_   = "while"
     annotate = "annotate"
 
 EXEC = (Head.assign, Head.assert_, Head.comment, Head.block, Head.function, Head.return_,

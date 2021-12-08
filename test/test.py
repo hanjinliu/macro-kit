@@ -152,18 +152,55 @@ for i in a:
     print(a)
     if i % 3 == 0:
         print("3n")
+t = 0
+while t < 3:
+    t = t + 1
 """
 
 code2 = """
 def g(a: int = 4):
-    return a - 1, a + 1
+    b: str = "a"
+    return a
 """
 
+code_operations = """
+a = 1
+b = a + 1
+c = a - 1
+arr = np.zeros((2, 2))
+a * b
+a / b
+a ** b
+a % b
+a // b
+a == b
+a != b
+a > b
+a >= b
+a < b
+a <= b
+a is b
+a is not b
+a in [1, 2, 3]
+a not in [1,2,3]
+a & b
+a | b
+a ^ b
+a and b
+a or b
+a += 1
+a -= 1
+a *= b
+a /= b
+arr @ arr
+arr @= arr
+"""
     
 def test_parsing():
     from macrokit import parse
     parse(code1)
     parse(code2)
+    parse(code_operations)
 
 def test_special_methods():
     macro = Macro(flags={"Return": False})

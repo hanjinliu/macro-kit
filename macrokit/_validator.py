@@ -37,7 +37,7 @@ class ValidationError(ValueError):
 validator = Validator[Head, list[Any]]()
 
 @validator.register(Head.empty)
-def _(args):
+def _no_arg(args):
     if len(args) != 0:
         raise ValidationError()
     return args
@@ -59,6 +59,7 @@ def _single_str(args):
 
 @validator.register(Head.assert_)
 @validator.register(Head.getitem)
+@validator.register(Head.unop)
 def _two_args(args):
     if len(args) != 2:
         raise ValidationError()
@@ -87,6 +88,7 @@ def _symbol_and_any(args):
     return [k, v]
 
 @validator.register(Head.binop)
+@validator.register(Head.aug)
 def _three_args(args):
     if len(args) != 3:
         raise ValidationError()
@@ -94,6 +96,7 @@ def _three_args(args):
 
 @validator.register(Head.function)
 @validator.register(Head.for_)
+@validator.register(Head.while_)
 def _an_arg_and_a_block(args):
     if len(args) != 2:
         raise ValidationError()

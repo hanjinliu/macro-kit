@@ -197,7 +197,6 @@ class Macro(Expr, MutableSequence[Expr]):
             A function that will called after new expression is appended. Must take an expression
             or an expression with the last returned value as inputs.
         """        
-        # TODO: record called twice
         kwargs = dict(macro=self, 
                       returned_callback=returned_callback, 
                       record_returned=self._flags.Return
@@ -341,7 +340,7 @@ class Macro(Expr, MutableSequence[Expr]):
             self._last_setval = None
         return out
     
-    bound: dict[int, Macro] = {} # TODO: use weakref?
+    bound: dict[int, Macro] = {}
     
     def __get__(self, obj: Any, type=None):
         if obj is None:

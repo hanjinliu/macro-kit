@@ -232,3 +232,29 @@ def test_special_methods():
         "int(a)\n" \
         "float(a)\n" \
         "str(a)"
+
+def test_field():
+    class A:
+        m = Macro(flags={"Return": False})
+        def __init__(self):
+            self.m # activate field
+        @m.record
+        def f(self, a, b): pass
+        
+        @m.property
+        def value(self): pass
+        
+        @value.setter
+        def value(self, v): pass
+    
+    a = A()
+    a.f(0, 1)
+    a.value
+    a.value = 5
+    a.value = 6
+    
+    macro_str = str(a.m.format([(a, "a")]))
+    assert macro_str == \
+        "a.f(0, 1)\n" \
+        "a.value\n" \
+        "a.value = 6"

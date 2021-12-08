@@ -30,7 +30,10 @@ _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
     Head.kw       : lambda e, i: f"{as_str(e.args[0])}={as_str(e.args[1])}",
     Head.assert_  : lambda e, i: " "*i + f"assert {as_str(e.args[0])}, {as_str(e.args[1])}".rstrip(", "),
     Head.comment  : lambda e, i: " "*i + f"# {e.args[0]}",
+    
+    Head.unop     : lambda e, i: " "*i + f"({as_str(e.args[0])}{as_str(e.args[1])})",
     Head.binop    : lambda e, i: " "*i + f"({as_str(e.args[1])} {as_str(e.args[0])} {as_str(e.args[2])})",
+    Head.aug      : lambda e, i: " "*i + f"{as_str(e.args[1])} {as_str(e.args[0])}= {as_str(e.args[2])}",
     
     Head.block    : lambda e, i: sjoin("\n", e.args, i),
     Head.function : lambda e, i: " "*i + f"def {as_str(e.args[0])}:\n{as_str(e.args[1], i+4)}",

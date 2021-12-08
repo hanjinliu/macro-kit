@@ -3,12 +3,11 @@ import ast
 import sys
 from functools import singledispatch
 import inspect
-from typing import Callable, NewType
+from typing import Callable
 
 from .symbol import Symbol
 from .expression import Expr, Head, symbol
 
-Operator = NewType("Operator", type)
 NoneType = type(None)
 
 AST_BINOP_MAP = {
@@ -35,6 +34,13 @@ AST_BINOP_MAP = {
     ast.BitXor: Symbol("^"),
     ast.And: Symbol("and"),
     ast.Or: Symbol("or"),
+}
+
+AST_UNOP_MAP = {
+    ast.UAdd: Symbol("+"),
+    ast.USub: Symbol("-"),
+    ast.Not: Symbol("not "),
+    ast.Invert: Symbol("~"),
 }
 
 def parse(source: str | Callable) -> Expr | Symbol:
@@ -101,6 +107,17 @@ def _(ast_object: ast.Name):
 def _(ast_object: ast.Expr):
     return from_ast(ast_object.value)
 
+@from_ast.register
+def _(ast_object: ast.UnaryOp):
+    return Expr(Head.unop, [AST_UNOP_MAP[ast_object.op], from_ast(ast_object.operand)])
+
+@from_ast.register
+def _(ast_object: ast.AugAssign):
+    target = from_ast(ast_object.target)
+    op = AST_BINOP_MAP[type(ast_object.op)]
+    value = from_ast(ast_object.value)
+    return Expr(Head.aug, [op, target, value])
+    
 @from_ast.register
 def _(ast_object: ast.Call):
     head = Head.call
@@ -183,7 +200,7 @@ def _(ast_object: ast.If):
 @from_ast.register
 def _(ast_object: ast.For):
     head = Head.for_
-    top = Expr(Head.binop, [Symbol.var("in", Operator), from_ast(ast_object.target), from_ast(ast_object.iter)])
+    top = Expr(Head.binop, [Symbol.var("in"), from_ast(ast_object.target), from_ast(ast_object.iter)])
     block = from_ast(ast_object.body)
     return Expr(head, [top, block])
 

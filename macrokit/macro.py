@@ -8,7 +8,7 @@ import inspect
 from typing import Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar, NamedTuple
 from types import ModuleType
 
-from .ast import parse, Operator
+from .ast import parse
 from .expression import Head, Expr, symbol, EXEC
 from .symbol import Symbol
 
@@ -36,6 +36,12 @@ BINOP_MAP = {
     "__and__": Symbol("&"),
     "__or__": Symbol("|"),
     "__xor__": Symbol("^")
+}
+
+UNOP_MAP = {
+    "__pos__": Symbol("+"),
+    "__neg__": Symbol("-"),
+    "__invert__": Symbol("~"),
 }
 
 BUILTIN_MAP = {
@@ -92,6 +98,8 @@ class Macro(Expr, MutableSequence[Expr]):
         super().__init__(head=Head.block, args=args)
         self.active = True
         self._callbacks = []
+        if isinstance(flags, MacroFlags):
+            flags = flags._asdict()
         self._flags = MacroFlags(**flags)
         self._last_setval: Expr = None
     
@@ -332,6 +340,20 @@ class Macro(Expr, MutableSequence[Expr]):
             self.append(expr)
             self._last_setval = None
         return out
+    
+    bound: dict[int, Macro] = {} # TODO: use weakref?
+    
+    def __get__(self, obj: Any, type=None):
+        if obj is None:
+            return self
+        obj_id = id(obj)
+        cls = self.__class__
+        try:
+            macro = cls.bound[obj_id]
+        except KeyError:
+            macro = cls(flags=self.flags)
+            cls.bound[obj_id] = macro
+        return macro
 
 class MacroMixin:
     """
@@ -508,6 +530,12 @@ class mFunction(mCallable):
                 expr = Expr(Head.del_, [target])
                 self._macro._last_setval = None
                 return expr
+        elif fname in UNOP_MAP.keys():
+            op = UNOP_MAP[fname]
+            def make_expr(obj: _O, *args):
+                expr = Expr(Head.unop, [op, self.to_namespace(obj)])
+                self._macro._last_setval = None
+                return expr
         elif fname in BINOP_MAP.keys():
             op = BINOP_MAP[fname]
             def make_expr(obj: _O, *args):
@@ -595,6 +623,8 @@ class mProperty(mObject, property):
     obj: property
     def __init__(self, prop: property, macro: Macro, returned_callback: MetaCallable = None,
                  namespace: Symbol|Expr = None, flags: MacroFlagOptions = {}):
+        if isinstance(flags, MacroFlags):
+            flags = flags._asdict()
         self._flags = MacroFlags(**flags)
         super().__init__(prop, macro, returned_callback, namespace, record_returned=self._flags.Return)
         self.obj = self.getter(prop.fget)

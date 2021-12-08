@@ -43,6 +43,7 @@ _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
     Head.elif_    : lambda e, i: " "*i + f"if {rm_par(as_str(e.args[0]))}:\n{as_str(e.args[1], i+4)}\n" + \
                                  " "*i + f"else:\n{as_str(e.args[2], i+4)}",
     Head.for_     : lambda e, i: " "*i + f"for {rm_par(as_str(e.args[0]))}:\n{as_str(e.args[1], i+4)}",
+    Head.while_   : lambda e, i: " "*i + f"while {rm_par(as_str(e.args[0]))}:\n{as_str(e.args[1], i+4)}",
     Head.annotate : lambda e, i: f"{as_str(e.args[0], i)}: {as_str(e.args[1])}"
 }
 

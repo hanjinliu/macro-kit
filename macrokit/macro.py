@@ -563,6 +563,12 @@ class mFunction(mCallable):
                 if expr is not None:
                     line = self.returned_callback(expr, out)
                 self._macro.append(line)
+                obj_id = id(obj)
+                if obj_id in self._macro.__class__.bound.keys():
+                    macro = self._macro.__class__.bound[obj_id]
+                    macro.append(line)
+                    # TODO: macro._last_setval should also be considered
+                    
             return out
 
         return method
@@ -641,6 +647,7 @@ class mProperty(mObject, property):
                 expr = Expr(Head.getattr, [self.to_namespace(obj), key])
                 expr = self.returned_callback(expr, out)
                 self._macro.append(expr)
+                self._record_instance(obj, expr)
                 self._macro._last_setval = None
             return out
         return self.obj.getter(getter)
@@ -663,6 +670,15 @@ class mProperty(mObject, property):
                 
                 line = self.returned_callback(expr, out)
                 self._macro.append(line)
+                
+                obj_id = id(obj)
+                if obj_id in self._macro.__class__.bound.keys():
+                    macro = self._macro.__class__.bound[obj_id]
+                    if macro._last_setval == target:
+                        macro.pop(-1)
+                    else:
+                        macro._last_setval = target
+                    macro.append(line)
                     
             return out
         
@@ -681,6 +697,7 @@ class mProperty(mObject, property):
                 expr = Expr(Head.del_, [target])
                 line = self.returned_callback(expr, out)
                 self._macro.append(line)
+                self._record_instance(obj, line)
                 self._macro._last_setval = None
             return out
         
@@ -697,6 +714,12 @@ class mProperty(mObject, property):
     
     def __delete__(self, obj) -> None:
         return self.obj.__delete__(obj)
+
+    def _record_instance(self, obj, line):
+        obj_id = id(obj)
+        if obj_id in self._macro.__class__.bound.keys():
+            macro = self._macro.__class__.bound[obj_id]
+            macro.append(line)
     
 class mModule(mObject):
     """

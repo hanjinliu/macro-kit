@@ -96,6 +96,10 @@ class Symbol:
     @classmethod
     def register_type(cls, function: Callable[[T], Any])-> Callable[[type[T]], type[T]]: ...
     
+    @overload
+    @classmethod
+    def register_type(cls, type: type[T], function: Callable[[T], Any]): ...
+    
     @classmethod
     def register_type(cls, type_or_function, function=None):
         """
@@ -141,10 +145,6 @@ class Symbol:
             return _register
         
         else:
-            raise TypeError()
+            raise TypeError("Arguments of 'register_type' must be type and/or function.")
         
-@wraps(Symbol.register_type)
-def register_type(type_or_function, function = None):
-    return Symbol.register_type(type_or_function, function)
-
-del wraps
+register_type = Symbol.register_type

@@ -29,6 +29,9 @@ class Symbol:
     # ID of global variables
     _variables: set[int] = set()
     
+    # Module symbols
+    _modules: dict[Symbol, ModuleType] = {}
+    
     def __init__(self, seq: str, object_id: int = None):
         self._name = str(seq)
         self.object_id = object_id or id(seq)
@@ -54,7 +57,10 @@ class Symbol:
         return self._name
     
     def __hash__(self) -> int:
-        return self.object_id
+        # To ensure Symbol to be hash safe, we have to consider both object ID and whether
+        # the Symbol is a constant because object ID of a variable is defined by the hash
+        # value of the identifier. 
+        return self.object_id * 2 + int(self.constant)
     
     def __eq__(self, other: Symbol) -> bool:
         if not isinstance(other, Symbol):
@@ -71,8 +77,14 @@ class Symbol:
             raise TypeError("'identifier' must be str")
         elif not identifier.isidentifier():
             raise ValueError(f"'{identifier}' is not a valid identifier.")
-        self = cls(identifier, 0)
-        self.object_id = hash(identifier)
+        self = cls(identifier, hash(identifier))
+        self.constant = False
+        return self
+    
+    @classmethod
+    def _reserved(cls, identifier: str):
+        # Users should never use this!!
+        self = cls(identifier, hash(identifier))
         self.constant = False
         return self
     

@@ -729,7 +729,10 @@ class mModule(mObject):
     def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
         super().__init__(obj, macro, returned_callback, namespace, record_returned)
-        symbol(obj) # register module symbol
+        if namespace is None:
+            self._symbol = symbol(obj) # register module symbol
+        else:
+            self._symbol = None
         
     def __getattr__(self, key: str):
         try:

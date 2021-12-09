@@ -1,5 +1,4 @@
 from __future__ import annotations
-from functools import wraps
 import inspect
 from typing import Callable, Any, TypeVar, overload
 from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
@@ -31,7 +30,7 @@ class Symbol:
     _variables: set[int] = set()
     
     def __init__(self, seq: str, object_id: int = None):
-        self.name = str(seq)
+        self._name = str(seq)
         self.object_id = object_id or id(seq)
         self.constant = True
     
@@ -64,7 +63,7 @@ class Symbol:
                 self.constant == other.constant)
     
     @classmethod
-    def var(cls, identifier: str, type: type = object):
+    def var(cls, identifier: str):
         """
         Make a variable symbol. Same indentifier with same type always returns identical symbol.
         """        

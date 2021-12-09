@@ -16,6 +16,7 @@ class Head(Enum):
     block    = "block"
     function = "function"
     return_  = "return"
+    raise_   = "raise"
     if_      = "if"
     elif_    = "elif"
     for_     = "for"

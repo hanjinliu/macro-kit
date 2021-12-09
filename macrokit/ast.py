@@ -109,7 +109,7 @@ def _(ast_object: ast.Expr):
 
 @from_ast.register
 def _(ast_object: ast.UnaryOp):
-    return Expr(Head.unop, [AST_UNOP_MAP[ast_object.op], from_ast(ast_object.operand)])
+    return Expr(Head.unop, [AST_UNOP_MAP[type(ast_object.op)], from_ast(ast_object.operand)])
 
 @from_ast.register
 def _(ast_object: ast.AugAssign):

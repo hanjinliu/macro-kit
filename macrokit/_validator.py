@@ -37,13 +37,13 @@ class ValidationError(ValueError):
 validator = Validator[Head, list[Any]]()
 
 @validator.register(Head.empty)
-@validator.register(Head.raise_)
 def _no_arg(args):
     if len(args) != 0:
         raise ValidationError()
     return args
 
 @validator.register(Head.del_)
+@validator.register(Head.raise_)
 def _single_arg(args):
     if len(args) != 1:
         raise ValidationError()

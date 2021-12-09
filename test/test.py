@@ -159,6 +159,8 @@ while t < 3:
 
 code2 = """
 def g(a: int = 4):
+    if not isinstance(a, int):
+        raise TypeError("a must be an integer, got {type(a)}.")
     b: str = "a"
     return a
 """

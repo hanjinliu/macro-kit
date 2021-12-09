@@ -427,9 +427,9 @@ class mObject:
     def macro(self) -> Macro:
         return self._macro
 
-_GET = Symbol.var("__get__", Callable)
-_SET = Symbol.var("__set__", Callable)
-_DELETE = Symbol.var("__delete__", Callable)
+_GET = Symbol.var("__get__")
+_SET = Symbol.var("__set__")
+_DELETE = Symbol.var("__delete__")
 
 class mCallable(mObject):
     obj: Callable

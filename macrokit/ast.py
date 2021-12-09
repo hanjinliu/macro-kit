@@ -251,7 +251,22 @@ def _(ast_object: ast.AnnAssign):
 
 @from_ast.register
 def _(ast_object: ast.Pass):
-    return Symbol.var("pass") # Should it be Expr(Head.pass_, [Symbol("pass")]) ??
+    return Symbol.var("pass")
+
+@from_ast.register
+def _(ast_object: ast.Break):
+    return Symbol.var("break")
+
+@from_ast.register
+def _(ast_object: ast.Continue):
+    return Symbol.var("continue")
+
+@from_ast.register
+def _(ast_object: ast.Raise):
+    exc = ast_object.exc
+    if ast_object.cause:
+        raise ValueError("'raise XX from YY' is not supported yet")
+    return Expr(Head.raise_, [from_ast(exc)])
     
 @from_ast.register
 def _(ast_object: ast.Return):

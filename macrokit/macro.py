@@ -19,29 +19,29 @@ _INHERITABLE = ("__module__", "__name__", "__qualname__", "__doc__", "__annotati
 
 
 BINOP_MAP = {
-    "__add__": Symbol("+"),
-    "__sub__": Symbol("-"),
-    "__mul__": Symbol("*"),
-    "__div__": Symbol("/"),
-    "__mod__": Symbol("%"),
-    "__eq__": Symbol("=="),
-    "__neq__": Symbol("!="),
-    "__gt__": Symbol(">"),
-    "__ge__": Symbol(">="),
-    "__lt__": Symbol("<"),
-    "__le__": Symbol("<="),
-    "__pow__": Symbol("**"),
-    "__matmul__": Symbol("@"),
-    "__floordiv__": Symbol("//"),
-    "__and__": Symbol("&"),
-    "__or__": Symbol("|"),
-    "__xor__": Symbol("^")
+    "__add__": Symbol._reserved("+"),
+    "__sub__": Symbol._reserved("-"),
+    "__mul__": Symbol._reserved("*"),
+    "__div__": Symbol._reserved("/"),
+    "__mod__": Symbol._reserved("%"),
+    "__eq__": Symbol._reserved("=="),
+    "__neq__": Symbol._reserved("!="),
+    "__gt__": Symbol._reserved(">"),
+    "__ge__": Symbol._reserved(">="),
+    "__lt__": Symbol._reserved("<"),
+    "__le__": Symbol._reserved("<="),
+    "__pow__": Symbol._reserved("**"),
+    "__matmul__": Symbol._reserved("@"),
+    "__floordiv__": Symbol._reserved("//"),
+    "__and__": Symbol._reserved("&"),
+    "__or__": Symbol._reserved("|"),
+    "__xor__": Symbol._reserved("^")
 }
 
 UNOP_MAP = {
-    "__pos__": Symbol("+"),
-    "__neg__": Symbol("-"),
-    "__invert__": Symbol("~"),
+    "__pos__": Symbol._reserved("+"),
+    "__neg__": Symbol._reserved("-"),
+    "__invert__": Symbol._reserved("~"),
 }
 
 BUILTIN_MAP = {
@@ -53,6 +53,7 @@ BUILTIN_MAP = {
     "__float__": Symbol("float"),
     "__int__": Symbol("int"),
     "__format__": Symbol("format"),
+    "__list__": Symbol("list"),
 }
 
 class MacroFlags(NamedTuple):

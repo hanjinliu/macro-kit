@@ -200,9 +200,9 @@ arr @= arr
     
 def test_parsing():
     from macrokit import parse
-    parse(code1)
-    parse(code2)
-    parse(code_operations)
+    str(parse(code1))
+    str(parse(code2))
+    str(parse(code_operations))
 
 def test_special_methods():
     macro = Macro(flags={"Return": False})

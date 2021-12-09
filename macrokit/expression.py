@@ -41,6 +41,7 @@ _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
     Head.block    : lambda e, i: sjoin("\n", e.args, i),
     Head.function : lambda e, i: " "*i + f"def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",
     Head.return_  : lambda e, i: " "*i + f"return {sjoin(', ', e.args)}",
+    Head.raise_   : lambda e, i: " "*i + f"raise {str_(e.args[0])}",
     Head.if_      : lambda e, i: " "*i + f"if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n" + \
                                  " "*i + f"else:\n{str_(e.args[2], i+4)}",
     Head.elif_    : lambda e, i: " "*i + f"if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n" + \

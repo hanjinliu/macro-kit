@@ -12,7 +12,6 @@ class Symbol:
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,
         MethodType: lambda e: e.__name__,
-        ModuleType: lambda e: e.__name__.split(".")[-1],
         type(None): lambda e: "None",
         str: repr,
         bytes: repr,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
 from typing import Callable, Iterable, Iterator, Any, Hashable, overload
+from types import ModuleType
 from numbers import Number
 from .symbol import Symbol
 from .head import Head, EXEC
@@ -130,6 +131,15 @@ class Expr:
         """        
         _globals = {(sym.name if isinstance(sym, Symbol) else sym): v 
                     for sym, v in _globals.items()}
+        # use registered modules
+        if Symbol._modules:
+            format_dict: dict[Symbol, str] = {}
+            for k, v in Symbol._modules.items():
+                vstr = make_symbol_str(v)
+                format_dict[k] = Symbol(vstr)
+                _globals[vstr] = v
+            self = self.format(format_dict)            
+        
         # TODO: Here should be some better ways to assign proper scope.
         if self.head in EXEC:
             return exec(str(self), _globals, _locals)
@@ -383,6 +393,16 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
             seq = f"{obj_type.__name__}({seq})"
     elif isinstance(obj, Number): # int, float, bool, ...
         seq = obj
+    elif isinstance(obj, ModuleType):
+        seq = obj.__name__.split(".")[-1]
+        # Register module to the default namespace of Symbol class. This function is
+        # called every time a module type object is converted to a Symbol because users
+        # always have to pass the module object to the global variables when calling 
+        # eval function.
+        sym = Symbol(seq, obj_id)
+        sym.constant = constant
+        Symbol._modules[sym] = obj
+        return sym
     elif hasattr(obj, "__name__"):
         seq = obj.__name__
     else:

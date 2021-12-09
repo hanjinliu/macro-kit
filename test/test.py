@@ -260,3 +260,11 @@ def test_field():
         "a.f(0, 1)\n" \
         "a.value\n" \
         "a.value = 6"
+
+def test_module_registration():
+    import numpy as np
+    from macrokit import Macro
+    m = Macro()
+    np_ = m.record(np)
+    np_.array([1,2,3])
+    m.eval()

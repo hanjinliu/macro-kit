@@ -726,6 +726,11 @@ class mModule(mObject):
     Macro recorder equipped module class.
     """
     obj: ModuleType
+    def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
+                 namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
+        super().__init__(obj, macro, returned_callback, namespace, record_returned)
+        symbol(obj) # register module symbol
+        
     def __getattr__(self, key: str):
         try:
             attr = getattr(self.obj, key)

@@ -402,11 +402,12 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
         if obj_id in Symbol._module_symbols.keys():
             sym = Symbol._module_symbols[obj_id]
         else:
-            seq = obj.__name__.split(".")[-1]
+            *main, seq = obj.__name__.split(".")
             sym = Symbol(seq, obj_id)
             sym.constant = True
-            Symbol._module_symbols[obj_id] = sym
-            Symbol._modules[obj_id] = obj
+            if len(main) == 0:
+                Symbol._module_symbols[obj_id] = sym
+                Symbol._modules[obj_id] = obj
         return sym
     elif hasattr(obj, "__name__"):
         seq = obj.__name__

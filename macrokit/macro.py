@@ -729,23 +729,19 @@ class mModule(mObject):
     def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
         super().__init__(obj, macro, returned_callback, namespace, record_returned)
-        if namespace is None:
-            self._symbol = symbol(obj) # register module symbol
-        else:
-            self._symbol = None
         
     def __getattr__(self, key: str):
         try:
             attr = getattr(self.obj, key)
-            _type = "module" if inspect.ismodule(attr) else "function"
+            is_module = inspect.ismodule(attr)
         except AttributeError:
             try:
                 attr = import_module("." + key, self.obj.__name__)
-                _type = "module"
+                is_module = True
             except ModuleNotFoundError:
                 raise ValueError(f"No function or submodule named '{key}'.")
         
-        if _type == "module":
+        if is_module:
             mmod = mModule(attr, self._macro, self.returned_callback, self.to_namespace(self.obj))
             setattr(self, key, mmod)
             return mmod

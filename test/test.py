@@ -23,25 +23,53 @@ def test_function():
 def test_module():
     import pandas as pd
     macro = Macro()
-    pd = macro.record(pd)
-    df0 = pd.DataFrame({"a": [2,3,5], "b":[True, False, False]})
-    df1 = pd.DataFrame({"a": [8,4,-1], "b":[True, True, False]})
+    pd_ = macro.record(pd)
+    df0 = pd_.DataFrame({"a": [2,3,5], "b":[True, False, False]})
+    df1 = pd_.DataFrame({"a": [8,4,-1], "b":[True, True, False]})
     assert str(macro.format([(df0, Symbol("df0")), (df1, Symbol("df1"))])) == \
         "df0 = pandas.DataFrame({'a': [2, 3, 5], 'b': [True, False, False]})\n" \
         "df1 = pandas.DataFrame({'a': [8, 4, -1], 'b': [True, True, False]})"
-
+    macro.eval()
+    assert str(macro.format([(df0, Symbol("df0")), (df1, Symbol("df1"))])) == \
+        "df0 = pandas.DataFrame({'a': [2, 3, 5], 'b': [True, False, False]})\n" \
+        "df1 = pandas.DataFrame({'a': [8, 4, -1], 'b': [True, True, False]})"
+        
     import skimage
     import numpy as np
     macro = Macro()
-    skimage = macro.record(skimage)
-    np = macro.record(np)
-    img = np.random.normal(size=(128, 128))
-    out = skimage.filters.gaussian(img, sigma=2)
-    thr = skimage.filters.threshold_otsu(out)
+    skimage_ = macro.record(skimage)
+    np_ = macro.record(np)
+    img = np_.random.normal(size=(128, 128))
+    out = skimage_.filters.gaussian(img, sigma=2)
+    thr = skimage_.filters.threshold_otsu(out)
     assert str(macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])) == \
         "img = numpy.random.normal(size=(128, 128))\n" \
         "out = skimage.filters.gaussian(img, sigma=2)\n" \
         "thr = skimage.filters.threshold_otsu(out)"
+    macro.eval()
+    assert str(macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])) == \
+        "img = numpy.random.normal(size=(128, 128))\n" \
+        "out = skimage.filters.gaussian(img, sigma=2)\n" \
+        "thr = skimage.filters.threshold_otsu(out)"
+    
+    macro = Macro()
+    df_ = Expr("getattr", [pd, pd.DataFrame])
+    ds_ = Expr("getattr", [pd, pd.Series])
+    expr1 = Expr.parse_call(df_, ({"a": [1, 2, 4],
+                                   "b": [True, False, False]},), {})
+    expr2 = Expr.parse_call(ds_, ((1, 2, 3),), {})
+    macro.append(expr1)
+    macro.append(expr2)
+    macro_str = str(macro)
+    assert macro_str == \
+        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
+        "pandas.Series((1, 2, 3))"
+    macro.eval() # pandas should be registered in Symbol
+    df_ = Expr("getattr", [pd, pd.DataFrame])
+    ds_ = Expr("getattr", [pd, pd.Series])
+    assert macro_str == \
+        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
+        "pandas.Series((1, 2, 3))"
 
 def test_format():
     macro = Macro()
@@ -260,25 +288,3 @@ def test_field():
         "a.f(0, 1)\n" \
         "a.value\n" \
         "a.value = 6"
-
-def test_module_registration():
-    import pandas as pd
-    from macrokit import Macro
-    macro = Macro()
-    df_ = Expr("getattr", [pd, pd.DataFrame])
-    ds_ = Expr("getattr", [pd, pd.Series])
-    expr1 = Expr.parse_call(df_, ({"a": [1, 2, 4],
-                                   "b": [True, False, False]},), {})
-    expr2 = Expr.parse_call(ds_, ((1, 2, 3),), {})
-    macro.append(expr1)
-    macro.append(expr2)
-    macro_str = str(macro)
-    assert macro_str == \
-        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
-        "pandas.Series((1, 2, 3))"
-    macro.eval() # pandas should be registered in Symbol
-    df_ = Expr("getattr", [pd, pd.DataFrame])
-    ds_ = Expr("getattr", [pd, pd.Series])
-    assert macro_str == \
-        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
-        "pandas.Series((1, 2, 3))"

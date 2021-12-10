@@ -23,7 +23,7 @@ class Validator(Generic[_T, _A]):
         try:
             func = self._map[arg]
         except KeyError:
-            return arg
+            return args
         try:
             out = func(*args)
         except ValidationError as e:

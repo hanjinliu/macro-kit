@@ -37,7 +37,7 @@ class Symbol:
     _module_symbols: dict[int, Symbol] = {}
     _module_map: dict[str, ModuleType] = {}
     
-    def __init__(self, seq: str, object_id: int = None):
+    def __init__(self, seq: Any, object_id: int = None):
         self._name = str(seq)
         self.object_id = object_id or id(seq)
         self.constant = True
@@ -73,7 +73,7 @@ class Symbol:
         # value of the identifier. 
         return self.object_id * 2 + int(self.constant)
     
-    def __eq__(self, other: Symbol) -> bool:
+    def __eq__(self, other) -> bool:
         if not isinstance(other, Symbol):
             raise TypeError(f"'==' is not supported between Symbol and {type(other)}")
         return (self.object_id == other.object_id and 
@@ -114,7 +114,7 @@ class Symbol:
     
     @overload
     @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], Any]): ...
+    def register_type(cls, type: type[T], function: Callable[[T], Any] | None): ...
     
     @classmethod
     def register_type(cls, type_or_function, function=None):
@@ -155,7 +155,7 @@ class Symbol:
         elif isinstance(type_or_function, Callable):
             if function is not None:
                 raise TypeError("")
-            def _register(type_):
+            def _register(type_: type):
                 cls._type_map[type_] = type_or_function
                 return type_
             return _register

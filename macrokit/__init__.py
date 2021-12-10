@@ -38,11 +38,12 @@ def get_macro(mapping=None) -> str:
         macro = _MACRO
     return str(macro)
 
-def set_flags(**flags: MacroFlagOptions):
+def set_flags(Get: bool = True, Set: bool = True, Delete: bool = True, 
+              Return: bool = True):
     """
     Set macro flags.
     """    
-    _MACRO._flags = MacroFlags(**flags)
+    _MACRO._flags = MacroFlags(Get, Set, Delete, Return)
     return None
 
 del wraps

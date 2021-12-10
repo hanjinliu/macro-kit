@@ -80,8 +80,8 @@ class Expr:
     def __str__(self) -> str:
         return str_(self)
     
-    def __eq__(self, expr: Expr | Symbol) -> bool:
-        if isinstance(expr, self.__class__):
+    def __eq__(self, expr) -> bool:
+        if isinstance(expr, Expr):
             if self.head == expr.head:
                 return self.args == expr.args
             else:
@@ -96,7 +96,7 @@ class Expr:
         out = [f"head: {self.head.name}\n{' '*ind}args:\n"]
         for i, arg in enumerate(self.args):
             if isinstance(arg, Symbol):
-                value = arg
+                value = arg.name
             else:
                 value = arg._dump(ind+4)
             out.append(f"{i:>{ind+2}}: {value}\n")
@@ -113,7 +113,7 @@ class Expr:
         # Always copy object deeply.
         return deepcopy(self)
     
-    def at(self, *indices: tuple[int, ...]) -> Symbol | Expr:
+    def at(self, *indices: int) -> Symbol | Expr:
         """
         Helper function to avoid ``expr.args[0].args[0] ...``. Also, exception descriptions
         during this function call. ``expr.at(i, j, k)`` is equivalent to
@@ -145,8 +145,8 @@ class Expr:
             Updated variable namespace. Will be a mapping from symbols to values.
             
         """        
-        _globals = {(sym.name if isinstance(sym, Symbol) else sym): v 
-                    for sym, v in _globals.items()}
+        _glb: dict[str, Any] = {(sym.name if isinstance(sym, Symbol) else sym): v 
+                                for sym, v in _globals.items()}
         
         # use registered modules
         if Symbol._module_symbols:
@@ -155,15 +155,15 @@ class Expr:
                 mod = Symbol._module_map[sym.name]
                 vstr = f"var{hex(id_)}"
                 format_dict[sym] = Symbol(vstr)
-                _globals[vstr] = mod
+                _glb[vstr] = mod
             # Modules will not be registered as alias ("np" will be "numpy" in macro).
             # To avoid name collision, it is safer to rename them to "var0x...".
             self = self.format(format_dict)
         
         if self.head in EXEC:
-            return exec(str(self), _globals, _locals)
+            return exec(str(self), _glb, _locals)
         else:
-            return eval(str(self), _globals, _locals)
+            return eval(str(self), _glb, _locals)
         
     @classmethod
     def parse_method(cls, obj: Any, func: Callable, args: tuple[Any, ...] = None, 
@@ -190,7 +190,7 @@ class Expr:
     
     @classmethod
     def parse_call(cls, 
-                   func: Callable, 
+                   func: Callable | Symbol | Expr, 
                    args: tuple[Any, ...] = None, 
                    kwargs: dict[str, Any] = None) -> Expr:
         """
@@ -292,7 +292,7 @@ class Expr:
     @overload
     def format(self, mapping: Iterable[tuple[Any, Symbol|Expr]], inplace: bool = False) -> Expr:...
     
-    def format(self, mapping: dict[Symbol, Symbol|Expr], inplace: bool = False) -> Expr:
+    def format(self, mapping, inplace=False) -> Expr:
         """
         Format expressions in the macro.
         
@@ -336,7 +336,7 @@ class Expr:
                     self.args[i] = new
         return self
 
-def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol, Symbol|Expr]:
+def check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Symbol|Expr]:
     _dict: dict[Symbol, Symbol] = {}
     for comp in mapping_list:
         if len(comp) != 2:
@@ -345,10 +345,15 @@ def check_format_mapping(mapping_list: Iterable[tuple[Any, Any]]) -> dict[Symbol
         if isinstance(v, Expr) and v.head in EXEC:
             raise ValueError("Cannot replace a symbol to a non-evaluable expression.")
         
+        key = symbol(k)
+        if isinstance(key, Expr):
+            raise TypeError(f"Object of type {type(k).__name__} returns Expr type, thus cannot"
+                             "be used as a format template.")
         if isinstance(v, str) and not isinstance(k, Symbol):
-            _dict[symbol(k)] = Symbol(v)
+            value = Symbol(v)
         else:
-            _dict[symbol(k)] = symbol(v)
+            value = symbol(v)
+        _dict[key] = value
     return _dict
 
 

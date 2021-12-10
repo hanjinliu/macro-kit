@@ -130,27 +130,29 @@ class Macro(Expr, MutableSequence[Expr]):
             Expression. If a string is given, it will be parsed to Expr object.
         """        
         if isinstance(expr, str):
-            expr = parse(expr)
-        elif not isinstance(expr, Expr):
+            expr_ = parse(expr)
+        elif isinstance(expr, Expr):
+            expr_ = expr
+        else:
             raise TypeError("Cannot insert objects to Macro except for Expr objects.")
         
-        self.args.insert(key, expr)
+        self.args.insert(key, expr_)
         for callback in self._callbacks:
-            callback(expr)
+            callback(expr_)
     
     @overload
     def __getitem__(self, key: int | str) -> Expr: ...
 
     @overload
-    def __getitem__(self, key: slice) -> Macro[Expr]: ...
+    def __getitem__(self, key: slice) -> Macro: ...
         
     def __getitem__(self, key):
         return self._args[key]
     
-    def __setitem__(self, key: int, value: Expr):
+    def __setitem__(self, key: int, value: Expr) -> None:
         self._args[key] = value
     
-    def __delitem__(self, key: int):
+    def __delitem__(self, key: int) -> None:
         del self._args[key]
     
     def __len__(self) -> int:
@@ -384,7 +386,7 @@ class mObject:
     Abstract class for macro recorder equipped objects.
     """    
     def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
-                 namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
+                 namespace: Symbol | Expr | None = None, record_returned: bool = True) -> None:
         self.obj = obj
         
         if returned_callback is not None:
@@ -435,7 +437,7 @@ _DELETE = Symbol.var("__delete__")
 class mCallable(mObject):
     obj: Callable
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
-                 namespace: Symbol|Expr = None, record_returned: bool = True):
+                 namespace: Symbol | Expr | None = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
         if self.__name__ == "__get__":
             def make_expr(*args, **kwargs):
@@ -474,7 +476,7 @@ class mFunction(mCallable):
     Macro recorder equipped functions. Generated functions are also compatible with methods.
     """
     def __init__(self, function: Callable, macro: Macro, returned_callback: MetaCallable = None,
-                 namespace: Symbol|Expr = None, record_returned: bool = True):
+                 namespace: Symbol | Expr | None = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
         self._method_type = None
             
@@ -597,7 +599,7 @@ class mClassMethod(mCallable): # TODO: inherit classmethod class if possible
     Macro recorder equipped classmethod class.
     """
     def __init__(self, function: classmethod, macro: Macro, returned_callback: MetaCallable = None, 
-                 namespace: Symbol | Expr = None, record_returned: bool = True):
+                 namespace: Symbol | Expr | None = None, record_returned: bool = True):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
         self.__self__ = function.__self__
         clsname = Symbol(self.__self__.__name__)
@@ -727,7 +729,7 @@ class mModule(mObject):
     """
     obj: ModuleType
     def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
-                 namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
+                 namespace: Symbol | Expr | None = None, record_returned: bool = True) -> None:
         super().__init__(obj, macro, returned_callback, namespace, record_returned)
         self.__all__ = getattr(obj, "__all__", [])
         

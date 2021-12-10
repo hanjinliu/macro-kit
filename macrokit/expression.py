@@ -113,12 +113,12 @@ class Expr:
         # Always copy object deeply.
         return deepcopy(self)
     
-    def eval(self, _globals: dict[Symbol|str, Any] = {}, _locals: dict = {}):
+    def eval(self, _globals: dict[Symbol | str, Any] = {}, _locals: dict = {}):
         """
         Evaluate or execute macro as an Python script.
         
-        Either ``eval`` or ``exec`` is called for every expressions, as determined by its
-        header. Calling this function is much safer than those not-recommended usage of 
+        Either ``eval`` or ``exec`` will get called, which determined by its header.
+        Calling this function is much safer than those not-recommended usage of 
         ``eval`` or ``exec``.
         
         Parameters
@@ -131,29 +131,32 @@ class Expr:
         """        
         _globals = {(sym.name if isinstance(sym, Symbol) else sym): v 
                     for sym, v in _globals.items()}
-        # use registered modules
-        if Symbol._modules:
-            format_dict: dict[Symbol, str] = {}
-            for k, v in Symbol._modules.items():
-                vstr = make_symbol_str(v)
-                format_dict[k] = Symbol(vstr)
-                _globals[vstr] = v
-            self = self.format(format_dict)            
         
-        # TODO: Here should be some better ways to assign proper scope.
+        # use registered modules
+        if Symbol._module_symbols:
+            format_dict: dict[Symbol, Symbol] = {}
+            for id_, mod in Symbol._modules.items():
+                sym = Symbol._module_symbols[id_]
+                vstr = f"var{hex(id_)}"
+                format_dict[sym] = Symbol(vstr)
+                _globals[vstr] = mod
+            # Modules will not be registered as alias ("np" will be "numpy" in macro).
+            # To avoid name collision, it is safer to rename them to "var0x...".
+            self = self.format(format_dict)
+        
         if self.head in EXEC:
             return exec(str(self), _globals, _locals)
         else:
             return eval(str(self), _globals, _locals)
         
     @classmethod
-    def parse_method(cls, obj: Any, func: Callable, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Expr:
+    def parse_method(cls, obj: Any, func: Callable, args: tuple[Any, ...] = None, 
+                     kwargs: dict[str, Any] = None) -> Expr:
         """
         Parse ``obj.func(*args, **kwargs)``.
         """
         method = cls(head=Head.getattr, args=[symbol(obj), func])
-        inputs = [method] + cls.convert_args(args, kwargs)
-        return cls(head=Head.call, args=inputs)
+        return cls.parse_call(method, args, kwargs)
 
     @classmethod
     def parse_init(cls, 
@@ -166,14 +169,8 @@ class Expr:
         """
         if init_cls is None:
             init_cls = type(obj)
-        if args is None:
-            args = ()
-        if kwargs is None:
-            kwargs = {}
         sym = symbol(obj)
-        return cls(Head.assign, [sym, 
-                                 cls(Head.call, [init_cls] + cls.convert_args(args, kwargs))
-                                 ])
+        return cls(Head.assign, [sym, cls.parse_call(init_cls, args, kwargs)])
     
     @classmethod
     def parse_call(cls, 
@@ -185,8 +182,12 @@ class Expr:
         """
         if args is None:
             args = ()
+        elif not isinstance(args, tuple):
+            raise TypeError("args must be a tuple")
         if kwargs is None:
             kwargs = {}
+        elif not isinstance(kwargs, dict):
+            raise TypeError("kwargs must be a dict")
         inputs = [func] + cls.convert_args(args, kwargs)
         return cls(head=Head.call, args=inputs)
     
@@ -394,14 +395,18 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
     elif isinstance(obj, Number): # int, float, bool, ...
         seq = obj
     elif isinstance(obj, ModuleType):
-        seq = obj.__name__.split(".")[-1]
         # Register module to the default namespace of Symbol class. This function is
         # called every time a module type object is converted to a Symbol because users
         # always have to pass the module object to the global variables when calling 
         # eval function.
-        sym = Symbol(seq, obj_id)
-        sym.constant = constant
-        Symbol._modules[sym] = obj
+        if obj_id in Symbol._module_symbols.keys():
+            sym = Symbol._module_symbols[obj_id]
+        else:
+            seq = obj.__name__.split(".")[-1]
+            sym = Symbol(seq, obj_id)
+            sym.constant = True
+            Symbol._module_symbols[obj_id] = sym
+            Symbol._modules[obj_id] = obj
         return sym
     elif hasattr(obj, "__name__"):
         seq = obj.__name__

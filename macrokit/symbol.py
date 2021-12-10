@@ -1,9 +1,14 @@
 from __future__ import annotations
 import inspect
-from typing import Callable, Any, TypeVar, overload
+from typing import Callable, Any, TypeVar, overload, TypedDict
 from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")
+
+class SymbolDict(TypedDict):
+    name: str
+    object_id: int
+    constant: bool
 
 class Symbol:
     # Map of how to convert object into a symbol.
@@ -29,15 +34,22 @@ class Symbol:
     _variables: set[int] = set()
     
     # Module symbols
-    _modules: dict[Symbol, ModuleType] = {}
+    _module_symbols: dict[int, Symbol] = {}
+    _modules: dict[int, ModuleType] = {}
     
     def __init__(self, seq: str, object_id: int = None):
         self._name = str(seq)
         self.object_id = object_id or id(seq)
         self.constant = True
     
+    def asdict(self) -> SymbolDict:
+        return {"name", self.name, 
+                "object_id", self.object_id, 
+                "constant", self.constant
+                }
+    
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
     
     @name.setter
@@ -87,17 +99,11 @@ class Symbol:
         self.constant = False
         return self
     
-    def as_parameter(self, default=inspect._empty):
+    def as_parameter(self, default=inspect._empty) -> inspect.Parameter:
         return inspect.Parameter(self._name, 
                                  inspect.Parameter.POSITIONAL_OR_KEYWORD, 
                                  default=default)
-    
-    def replace(self, other: Symbol) -> None:
-        self.name = other.name
-        self.object_id = other.object_id
-        self.constant = other.constant
-        return None
-    
+        
     @overload
     @classmethod
     def register_type(cls, type: type[T]) -> Callable[[Callable[[T], Any]], Callable[[T], Any]]: ...

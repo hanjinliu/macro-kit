@@ -262,9 +262,23 @@ def test_field():
         "a.value = 6"
 
 def test_module_registration():
-    import numpy as np
+    import pandas as pd
     from macrokit import Macro
-    m = Macro()
-    np_ = m.record(np)
-    np_.array([1,2,3])
-    m.eval()
+    macro = Macro()
+    df_ = Expr("getattr", [pd, pd.DataFrame])
+    ds_ = Expr("getattr", [pd, pd.Series])
+    expr1 = Expr.parse_call(df_, ({"a": [1, 2, 4],
+                                   "b": [True, False, False]},), {})
+    expr2 = Expr.parse_call(ds_, ((1, 2, 3),), {})
+    macro.append(expr1)
+    macro.append(expr2)
+    macro_str = str(macro)
+    assert macro_str == \
+        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
+        "pandas.Series((1, 2, 3))"
+    macro.eval() # pandas should be registered in Symbol
+    df_ = Expr("getattr", [pd, pd.DataFrame])
+    ds_ = Expr("getattr", [pd, pd.Series])
+    assert macro_str == \
+        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
+        "pandas.Series((1, 2, 3))"

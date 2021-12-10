@@ -1,8 +1,8 @@
-__version__ = "0.3.3dev1"
+__version__ = "0.3.3"
 
 from .symbol import Symbol, register_type
 from .expression import Expr, Head, symbol
-from .macro import Macro, MacroFlags, MacroFlagOptions
+from .macro import Macro, MacroFlags
 from .ast import parse
 from functools import wraps
 

@@ -729,6 +729,7 @@ class mModule(mObject):
     def __init__(self, obj, macro: Macro, returned_callback: MetaCallable = None, 
                  namespace: Symbol|Expr = None, record_returned: bool = True) -> None:
         super().__init__(obj, macro, returned_callback, namespace, record_returned)
+        self.__all__ = getattr(obj, "__all__", [])
         
     def __getattr__(self, key: str):
         try:
@@ -743,9 +744,14 @@ class mModule(mObject):
         
         if is_module:
             mmod = mModule(attr, self._macro, self.returned_callback, self.to_namespace(self.obj))
-            setattr(self, key, mmod)
+            setattr(self, key, mmod) # cache
             return mmod
-            
+        
+        elif not isinstance(attr, Callable):
+            # constants, such as "__version__"
+            # TODO: should we record this as getattr?
+            return attr
+        
         @wraps(attr)
         def mfunc(*args, **kwargs):
             with self._macro.blocked():

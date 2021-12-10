@@ -406,6 +406,7 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
             sym = Symbol(seq, obj_id)
             sym.constant = True
             if len(main) == 0:
+                # submodules should not be registered
                 Symbol._module_symbols[obj_id] = sym
                 Symbol._modules[obj_id] = obj
         return sym

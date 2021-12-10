@@ -35,7 +35,7 @@ class Symbol:
     
     # Module symbols
     _module_symbols: dict[int, Symbol] = {}
-    _modules: dict[int, ModuleType] = {}
+    _module_map: dict[str, ModuleType] = {}
     
     def __init__(self, seq: str, object_id: int = None):
         self._name = str(seq)
@@ -43,9 +43,9 @@ class Symbol:
         self.constant = True
     
     def asdict(self) -> SymbolDict:
-        return {"name", self.name, 
-                "object_id", self.object_id, 
-                "constant", self.constant
+        return {"name": self.name, 
+                "object_id": self.object_id, 
+                "constant": self.constant
                 }
     
     @property

@@ -1,5 +1,5 @@
 import pytest
-from macrokit import Macro, Expr, Symbol
+from macrokit import Macro, Expr, Symbol, symbol, register_type, parse
 
 def test_function():
     macro = Macro()
@@ -135,7 +135,6 @@ def test_class():
         "a['a'] = True"
 
 def test_register_type():
-    from macrokit import register_type, symbol
     import numpy as np
     
     macro = Macro()
@@ -227,7 +226,6 @@ arr @= arr
 """
     
 def test_parsing():
-    from macrokit import parse
     str(parse(code1))
     str(parse(code2))
     str(parse(code_operations))
@@ -288,3 +286,20 @@ def test_field():
         "a.f(0, 1)\n" \
         "a.value\n" \
         "a.value = 6"
+
+def test_at():
+    expr = parse("mod.func(ins.attr.name)")
+    assert expr.at(1,0,0) == expr.args[1].args[0].args[0]
+    assert expr.at(1,1) == expr.args[1].args[1]
+
+def test_module_update():
+    import time as tm
+    time_ = symbol(tm)
+    macro = Macro()
+    macro.append(Expr("call", [Expr("getattr", [time_, "time"])]))
+    macro_str = str(macro)
+    assert macro_str == "time.time()"
+    re_compiled = parse(macro_str)
+    re_compiled.eval()
+    assert re_compiled == macro[0]
+    

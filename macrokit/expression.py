@@ -113,6 +113,22 @@ class Expr:
         # Always copy object deeply.
         return deepcopy(self)
     
+    def at(self, *indices: tuple[int, ...]) -> Symbol | Expr:
+        """
+        Helper function to avoid ``expr.args[0].args[0] ...``. Also, exception descriptions
+        during this function call. ``expr.at(i, j, k)`` is equivalent to
+        ``expr.args[i].args[j].args[k]``.
+        """ 
+        now = self
+        for i in indices:
+            try:
+                now = now._args[i]
+            except IndexError as e:
+                raise type(e)(f"list index out of range at position {i}.")
+            except AttributeError as e:
+                raise type(e)(f"Indexing encounted Symbol at position {i}.")
+        return now
+    
     def eval(self, _globals: dict[Symbol | str, Any] = {}, _locals: dict = {}):
         """
         Evaluate or execute macro as an Python script.
@@ -135,8 +151,8 @@ class Expr:
         # use registered modules
         if Symbol._module_symbols:
             format_dict: dict[Symbol, Symbol] = {}
-            for id_, mod in Symbol._modules.items():
-                sym = Symbol._module_symbols[id_]
+            for id_, sym in Symbol._module_symbols.items():
+                mod = Symbol._module_map[sym.name]
                 vstr = f"var{hex(id_)}"
                 format_dict[sym] = Symbol(vstr)
                 _globals[vstr] = mod
@@ -214,7 +230,7 @@ class Expr:
             inputs.append(a)
                 
         for k, v in kwargs.items():
-            inputs.append(cls(Head.kw, [Symbol(k), v]))
+            inputs.append(cls(Head.kw, [Symbol(k), symbol(v)]))
         return inputs
     
     @classmethod
@@ -249,12 +265,12 @@ class Expr:
         Recursively iterate along all the arguments.
         """
         for arg in self.args:
-            if isinstance(arg, self.__class__):
+            if isinstance(arg, Expr):
                 yield from arg.iter_args()
             elif isinstance(arg, Symbol):
                 yield arg
             else:
-                raise RuntimeError(arg)
+                raise RuntimeError(f"{arg} (type {type(arg)})")
         
     def iter_expr(self) -> Iterator[Expr]:
         """
@@ -408,7 +424,7 @@ def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
             if len(main) == 0:
                 # submodules should not be registered
                 Symbol._module_symbols[obj_id] = sym
-                Symbol._modules[obj_id] = obj
+                Symbol._module_map[seq] = obj
         return sym
     elif hasattr(obj, "__name__"):
         seq = obj.__name__

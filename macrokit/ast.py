@@ -43,7 +43,7 @@ AST_UNOP_MAP = {
     ast.Invert: Symbol._reserved("~"),
 }
 
-def parse(source: str | Callable) -> Expr | Symbol:
+def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
     """
     Convert Python code string into Expr/Symbol objects.
     """
@@ -51,11 +51,14 @@ def parse(source: str | Callable) -> Expr | Symbol:
         source = inspect.getsource(source)
     body = ast.parse(source).body
     if len(body) == 1:
-        ast_object = ast.parse(source).body[0]
+        ast_object = body[0]
     else:
-        ast_object = ast.parse(source).body
+        ast_object = body
     
-    return from_ast(ast_object)
+    out = from_ast(ast_object)
+    if not squeeze and len(body) == 1:
+        out = Expr(Head.block, [out])
+    return out
 
 @singledispatch
 def from_ast(ast_object: ast.AST | list | NoneType):
@@ -101,6 +104,9 @@ else:
 
 @from_ast.register
 def _(ast_object: ast.Name):
+    name = ast_object.id
+    if name in Symbol._module_map.keys():
+        return Symbol._module_map[name]
     return Symbol(ast_object.id)
 
 @from_ast.register

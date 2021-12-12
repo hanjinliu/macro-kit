@@ -1,11 +1,11 @@
 from __future__ import annotations
 from contextlib import contextmanager
 from copy import deepcopy
-from collections.abc import MutableSequence
 from importlib import import_module
 from functools import partial, wraps
 import inspect
-from typing import Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar, NamedTuple
+from typing import (Callable, Iterable, Iterator, Any, TypedDict, Union, overload, TypeVar,
+                    NamedTuple, MutableSequence)
 from types import ModuleType
 
 from .ast import parse

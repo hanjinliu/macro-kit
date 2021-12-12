@@ -34,7 +34,7 @@ class Validator(Generic[_T, _A]):
 class ValidationError(ValueError):
     pass
     
-validator = Validator[Head, list[Any]]()
+validator: Validator[Head, list[Any]] = Validator()
 
 @validator.register(Head.empty)
 def _no_arg(args):

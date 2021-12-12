@@ -3,10 +3,10 @@ from setuptools import setup, find_packages
 with open("macrokit/__init__.py", encoding="utf-8") as f:
     line = next(iter(f))
     VERSION = line.strip().split()[-1][1:-1]
-      
+
 with open("README.md", "r") as f:
     readme = f.read()
-    
+
 setup(
     name="macro-kit",
     version=VERSION,
@@ -18,5 +18,5 @@ setup(
     license="BSD 3-Clause",
     download_url="https://github.com/hanjinliu/macro-kit",
     packages=find_packages(exclude=["test", "examples"]),
-    python_requires=">=3.7",
-    )
+    python_requires=">=3.8",
+)

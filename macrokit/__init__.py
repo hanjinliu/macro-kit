@@ -15,21 +15,26 @@ __all__ = ["Symbol", "Head", "Expr", "Macro",
 
 _MACRO = Macro()
 
+
 @wraps(_MACRO.blocked)
 def blocked():
     return _MACRO.blocked()
 
+
 @wraps(_MACRO.record)
-def record(obj = None, *, returned_callback = None):
+def record(obj=None, *, returned_callback=None):
     return _MACRO.record(obj, returned_callback=returned_callback)
+
 
 @wraps(_MACRO.property)
 def property(prop):
     return _MACRO.property(prop)
 
+
 @wraps(_MACRO.dump)
 def dump() -> str:
     return _MACRO.dump()
+
 
 def get_macro(mapping=None) -> str:
     if mapping:
@@ -38,12 +43,14 @@ def get_macro(mapping=None) -> str:
         macro = _MACRO
     return str(macro)
 
-def set_flags(Get: bool = True, Set: bool = True, Delete: bool = True, 
+
+def set_flags(Get: bool = True, Set: bool = True, Delete: bool = True,
               Return: bool = True):
     """
     Set macro flags.
-    """    
+    """
     _MACRO._flags = MacroFlags(Get, Set, Delete, Return)
     return None
+
 
 del wraps

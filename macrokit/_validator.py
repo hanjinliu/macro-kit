@@ -6,19 +6,21 @@ from .head import Head
 _T = TypeVar("_T", bound=Hashable)
 _A = TypeVar("_A")
 
+
 class Validator(Generic[_T, _A]):
     """
     A validator class that will be used for Expr argument validation.
     """
+
     def __init__(self):
         self._map: dict[_T, Callable[[_A], _A]] = {}
-    
+
     def register(self, value: _T):
         def wrapper(func: Callable[[_A], _A]):
             self._map[value] = func
             return func
         return wrapper
-            
+
     def __call__(self, arg: _T, *args: _A) -> _A:
         try:
             func = self._map[arg]
@@ -31,10 +33,13 @@ class Validator(Generic[_T, _A]):
             raise e
         return out
 
+
 class ValidationError(ValueError):
     pass
-    
+
+
 validator: Validator[Head, list[Any]] = Validator()
+
 
 @validator.register(Head.empty)
 def _no_arg(args):
@@ -42,12 +47,14 @@ def _no_arg(args):
         raise ValidationError()
     return args
 
+
 @validator.register(Head.del_)
 @validator.register(Head.raise_)
 def _single_arg(args):
     if len(args) != 1:
         raise ValidationError()
     return args
+
 
 @validator.register(Head.comment)
 def _single_str(args):
@@ -58,6 +65,7 @@ def _single_str(args):
         k.name = k.name.strip("'")
     return args
 
+
 @validator.register(Head.assert_)
 @validator.register(Head.getitem)
 @validator.register(Head.unop)
@@ -65,6 +73,7 @@ def _two_args(args):
     if len(args) != 2:
         raise ValidationError()
     return args
+
 
 @validator.register(Head.getattr)
 def _getattr(args):
@@ -74,6 +83,7 @@ def _getattr(args):
     if isinstance(k, Symbol):
         k.name = k.name.strip("'")
     return args
+
 
 @validator.register(Head.assign)
 @validator.register(Head.kw)
@@ -88,12 +98,14 @@ def _symbol_and_any(args):
         k = Symbol.var(k.name)
     return [k, v]
 
+
 @validator.register(Head.binop)
 @validator.register(Head.aug)
 def _three_args(args):
     if len(args) != 3:
         raise ValidationError()
     return args
+
 
 @validator.register(Head.function)
 @validator.register(Head.for_)
@@ -105,6 +117,7 @@ def _an_arg_and_a_block(args):
     if getattr(b, "head", None) != Head.block:
         raise ValidationError()
     return args
+
 
 @validator.register(Head.if_)
 @validator.register(Head.elif_)

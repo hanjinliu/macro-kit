@@ -1,6 +1,5 @@
 from __future__ import annotations
 import ast
-import sys
 from functools import singledispatch
 import inspect
 from typing import Callable
@@ -80,31 +79,9 @@ def _(ast_object: ast.Expr):
     return from_ast(ast_object.value)
 
 
-if sys.version_info <= (3, 7):
-    @from_ast.register
-    def _(ast_object: ast.Num):
-        return symbol(ast_object.n)
-
-    @from_ast.register
-    def _(ast_object: ast.Str):
-        return symbol(ast_object.s)
-
-    @from_ast.register
-    def _(ast_object: ast.NameConstant):
-        return symbol(ast_object.n)
-
-    @from_ast.register
-    def _(ast_object: ast.Bytes):
-        return symbol(ast_object.s)
-
-    @from_ast.register
-    def _(ast_object: ast.Ellipsis):
-        return symbol(ast_object.s)
-
-else:
-    @from_ast.register
-    def _(ast_object: ast.Constant):
-        return symbol(ast_object.value)
+@from_ast.register
+def _(ast_object: ast.Constant):
+    return symbol(ast_object.value)
 
 
 @from_ast.register

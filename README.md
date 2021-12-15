@@ -2,7 +2,7 @@
 
 `macro-kit` is a package for efficient macro recording and metaprogramming in Python using abstract syntax tree (AST).
 
-The design of AST in this package is strongly inspired by [Julia metaprogramming](https://docs.julialang.org/en/v1/manual/metaprogramming/). Similar methods are also implemented in builtin `ast` module but `macro-kit` is more focused on the macro generation and customization.
+The design of AST in this package is strongly inspired by [Julia metaprogramming](https://docs.julialang.org/en/v1/manual/metaprogramming/). Similar methods are also implemented in builtin `ast` module but `macro-kit` (Julia-style metaprogramming) is more convenient in code operation and also focused on the macro generation and customization.
 
 
 ## Installation
@@ -139,26 +139,11 @@ macro
 var0x2a0a2864090 = numpy.random.random(30)
 var0x2a0a40daef0 = numpy.mean(var0x2a0a2864090)
 ```
+
+Recorded module is stored in `Symbol` so you can safely `eval` the macro without passing the module object as the global variables.
+
 ```python
-from dask import array as da
-dask_macro = macro.format([(np, "da")])
-dask_macro
-```
-```
-[Out]
-var0x2a0a2864090 = da.random.random(30)
-var0x2a0a40daef0 = da.mean(var0x2a0a2864090)
-```
-```python
-output = {}
-dask_macro.eval({"da": da}, output)
-output
-```
-```
-[Out]
-{:da: <module 'dask.array' from 'C:\\...\\__init__.py'>,
- :var0x2a0a2864090: dask.array<random_sample, shape=(30,), dtype=float64, chunksize=(30,), chunktype=numpy.ndarray>,
- :var0x2a0a40daef0: dask.array<mean_agg-aggregate, shape=(), dtype=float64, chunksize=(), chunktype=numpy.ndarray>}
+macro.eval() # this works
 ```
 
 4. String parsing

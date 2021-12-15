@@ -14,7 +14,7 @@ from typing import (
     overload,
     TypeVar,
     NamedTuple,
-    MutableSequence,
+    MutableSequence
 )
 from types import ModuleType
 
@@ -447,7 +447,8 @@ class mObject:
         if returned_callback is not None:
             _callback_nargs = len(inspect.signature(returned_callback).parameters)
             if _callback_nargs == 1:
-                _returned_callback = lambda expr, out: returned_callback(expr)
+                def _returned_callback(expr: Expr, out):
+                    return returned_callback(expr)
             elif _callback_nargs == 2:
                 _returned_callback = returned_callback
             else:
@@ -497,6 +498,7 @@ _DELETE = Symbol.var("__delete__")
 
 class mCallable(mObject):
     obj: Callable
+    __name__: str
 
     def __init__(
         self,
@@ -740,12 +742,12 @@ class mStaticMethod(mCallable):
         function: staticmethod,
         macro: Macro,
         returned_callback: MetaCallable = None,
-        namespace: Symbol | Expr = None,
+        namespace: Symbol | Expr | None = None,
         record_returned: bool = True,
     ):
         super().__init__(function, macro, returned_callback, namespace, record_returned)
 
-        clsname = function.__qualname__.split(".")[-2]
+        clsname = function.__func__.__qualname__.split(".")[-2]
         if self.namespace is None:
             self.namespace = Symbol(clsname)
         else:
@@ -779,7 +781,7 @@ class mProperty(mObject, property):
         )
         self.obj = self.getter(prop.fget)
 
-    def getter(self, fget: Callable[[_O], None]) -> property:
+    def getter(self, fget: Callable[[_O], Any]) -> property:
         if not self._flags.Get:
             return self.obj.getter(fget)
         key = Symbol(fget.__name__)
@@ -906,7 +908,7 @@ class mModule(mObject):
             setattr(self, key, mmod)  # cache
             return mmod
 
-        elif not isinstance(attr, Callable):
+        elif not callable(attr):
             # constants, such as "__version__"
             # TODO: should we record this as getattr?
             return attr

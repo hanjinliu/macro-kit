@@ -336,3 +336,10 @@ def test_module_update():
     re_compiled = parse(macro_str)
     re_compiled.eval()
     assert re_compiled == macro[0]
+
+
+def test_eq():
+    assert parse("a = 1") == parse("a = 1")
+    assert parse("a = 1") != parse("b.a = 1")
+    assert parse("func(3)") == parse("func(3)")
+    # assert parse("t['xy'] = func(0, 2)") == parse("t['xy'] = func(0, 2)") BUG: False!!

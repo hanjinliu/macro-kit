@@ -78,7 +78,7 @@ class Symbol:
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Symbol):
-            raise TypeError(f"'==' is not supported between Symbol and {type(other)}")
+            return False
         return self.object_id == other.object_id and self.constant == other.constant
 
     @classmethod

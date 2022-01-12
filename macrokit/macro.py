@@ -9,13 +9,13 @@ from typing import (
     Iterable,
     Iterator,
     Any,
-    TypedDict,
     Union,
     overload,
     TypeVar,
     NamedTuple,
     MutableSequence
 )
+from typing_extensions import TypedDict
 from types import ModuleType
 
 from .ast import parse

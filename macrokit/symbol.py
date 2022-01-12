@@ -1,6 +1,7 @@
 from __future__ import annotations
 import inspect
-from typing import Callable, Any, TypeVar, overload, TypedDict
+from typing import Callable, Any, TypeVar, overload
+from typing_extensions import TypedDict
 from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")

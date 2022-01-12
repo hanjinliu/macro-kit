@@ -1,4 +1,5 @@
 from __future__ import annotations
+import sys
 import ast
 from functools import singledispatch
 import inspect
@@ -80,9 +81,31 @@ def _expr(ast_object: ast.Expr):
     return from_ast(ast_object.value)
 
 
-@from_ast.register
-def _constant(ast_object: ast.Constant):
-    return symbol(ast_object.value)
+if sys.version_info < (3, 8):
+    @from_ast.register
+    def _(ast_object: ast.Num):
+        return symbol(ast_object.n)
+
+    @from_ast.register
+    def _str(ast_object: ast.Str):
+        return symbol(ast_object.s)
+
+    @from_ast.register
+    def _name_constant(ast_object: ast.NameConstant):
+        return symbol(ast_object.n)
+
+    @from_ast.register
+    def _bytes(ast_object: ast.Bytes):
+        return symbol(ast_object.s)
+
+    @from_ast.register
+    def _ellipsis(ast_object: ast.Ellipsis):
+        return symbol(ast_object.s)
+
+else:
+    @from_ast.register
+    def _constant(ast_object: ast.Constant):
+        return symbol(ast_object.value)
 
 
 @from_ast.register

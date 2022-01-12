@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Any, Hashable, TypeVar, Generic
+from typing import Callable, Any, Hashable, TypeVar, Generic, Iterable
 from .symbol import Symbol
 from .head import Head
 
@@ -21,7 +21,7 @@ class Validator(Generic[_T, _A]):
             return func
         return wrapper
 
-    def __call__(self, arg: _T, *args: _A) -> _A:
+    def __call__(self, arg: _T, *args: _A) -> _A | Iterable[_A]:
         try:
             func = self._map[arg]
         except KeyError:

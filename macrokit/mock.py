@@ -8,8 +8,10 @@ from .head import Head
 class Mock:
     def __init__(self, sym: Symbol | Expr | str):
         if isinstance(sym, str):
-            sym = Symbol.var(sym)
-        self._sym: Symbol | Expr = sym
+            _sym = Symbol.var(sym)
+        else:
+            _sym = sym
+        self._sym: Symbol | Expr = _sym
 
     def __getattr__(self, attr: str) -> Mock:
         expr = Expr(Head.getattr, [self._sym, attr])

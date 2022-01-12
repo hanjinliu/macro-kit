@@ -186,8 +186,8 @@ class Macro(Expr, MutableSequence[Expr]):
     def __len__(self) -> int:
         return len(self._args)
 
-    def __iter__(self) -> Iterator[Expr]:
-        return iter(self._args)
+    def __iter__(self) -> Iterator[Symbol | Expr]:
+        return self._args.__iter__()
 
     @contextmanager
     def blocked(self):
@@ -288,7 +288,7 @@ class Macro(Expr, MutableSequence[Expr]):
         for name, attr in inspect.getmembers(cls):
             if name in _NON_RECORDABLE:
                 continue
-            if isinstance(attr, Callable):
+            if callable(attr):
                 key = self._FLAG_MAP.get(name, "None")
                 if not getattr(self._flags, key, True):
                     continue
@@ -791,6 +791,8 @@ class mProperty(mObject, property):
             namespace,
             record_returned=self._flags.Return,
         )
+        if prop.fget is None:
+            raise ValueError("getter is not set.")
         self.obj = self.getter(prop.fget)
 
     def getter(self, fget: Callable[[_O], Any]) -> property:

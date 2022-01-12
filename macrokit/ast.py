@@ -314,7 +314,7 @@ def _return(ast_object: ast.Return):
     return Expr(head, args)
 
 
-def nest_binop(op, values: list[ast.AST]):
+def nest_binop(op, values: list[ast.expr]):
     if len(values) == 2:
         return [op,
                 from_ast(values[0]),
@@ -325,7 +325,7 @@ def nest_binop(op, values: list[ast.AST]):
                 Expr(Head.binop, nest_binop(op, values[1:]))]
 
 
-def nest_compare(ops: list[ast.AST], values: list[ast.AST]):
+def nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
     if len(ops) == 1:
         return [AST_BINOP_MAP[type(ops[0])],
                 from_ast(values[0]),

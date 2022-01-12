@@ -124,7 +124,7 @@ class Symbol:
 
     @overload
     @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], Any] | None):
+    def register_type(cls, type: type[T], function: Callable[[T], Any] | None) -> None:
         ...
 
     @classmethod

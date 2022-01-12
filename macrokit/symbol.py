@@ -102,7 +102,7 @@ class Symbol:
         self.constant = False
         return self
 
-    def as_parameter(self, default=inspect._empty) -> inspect.Parameter:
+    def as_parameter(self, default=inspect.Parameter.empty) -> inspect.Parameter:
         return inspect.Parameter(
             self._name, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default
         )

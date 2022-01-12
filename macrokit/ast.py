@@ -50,6 +50,7 @@ def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
     if callable(source):
         source = inspect.getsource(source)
     body = ast.parse(source).body
+    ast_object: list[ast.stmt] | ast.stmt
     if len(body) == 1:
         ast_object = body[0]
     else:
@@ -70,22 +71,22 @@ def from_ast(ast_object: ast.AST | list | NoneType):
 
 
 @from_ast.register
-def _(ast_object: NoneType):
+def _none(ast_object: NoneType):
     return None
 
 
 @from_ast.register
-def _(ast_object: ast.Expr):
+def _expr(ast_object: ast.Expr):
     return from_ast(ast_object.value)
 
 
 @from_ast.register
-def _(ast_object: ast.Constant):
+def _constant(ast_object: ast.Constant):
     return symbol(ast_object.value)
 
 
 @from_ast.register
-def _(ast_object: ast.Name):
+def _name(ast_object: ast.Name):
     name = ast_object.id
     if name in Symbol._module_map.keys():
         return Symbol._module_map[name]
@@ -93,18 +94,13 @@ def _(ast_object: ast.Name):
 
 
 @from_ast.register
-def _(ast_object: ast.Expr):
-    return from_ast(ast_object.value)
-
-
-@from_ast.register
-def _(ast_object: ast.UnaryOp):
+def _unaryop(ast_object: ast.UnaryOp):
     return Expr(Head.unop, [AST_UNOP_MAP[type(ast_object.op)],
                             from_ast(ast_object.operand)])
 
 
 @from_ast.register
-def _(ast_object: ast.AugAssign):
+def _augassign(ast_object: ast.AugAssign):
     target = from_ast(ast_object.target)
     op = AST_BINOP_MAP[type(ast_object.op)]
     value = from_ast(ast_object.value)
@@ -112,7 +108,7 @@ def _(ast_object: ast.AugAssign):
 
 
 @from_ast.register
-def _(ast_object: ast.Call):
+def _call(ast_object: ast.Call):
     head = Head.call
     args = [from_ast(ast_object.func)] + [from_ast(k) for k in ast_object.args] + \
         [Expr(Head.kw, [Symbol(k.arg), from_ast(k.value)]) for k in ast_object.keywords]
@@ -120,7 +116,7 @@ def _(ast_object: ast.Call):
 
 
 @from_ast.register
-def _(ast_object: ast.Assign):
+def _assign(ast_object: ast.Assign):
     head = Head.assign
     if len(ast_object.targets) != 1:
         target = tuple(from_ast(x) for x in ast_object.targets)
@@ -131,36 +127,36 @@ def _(ast_object: ast.Assign):
 
 
 @from_ast.register
-def _(ast_object: ast.Attribute):
+def _attribute(ast_object: ast.Attribute):
     head = Head.getattr
     args = [from_ast(ast_object.value), Symbol(ast_object.attr)]
     return Expr(head, args)
 
 
 @from_ast.register
-def _(ast_object: ast.Subscript):
+def _subscript(ast_object: ast.Subscript):
     head = Head.getitem
     args = [from_ast(ast_object.value), from_ast(ast_object.slice)]
     return Expr(head, args)
 
 
 @from_ast.register
-def _(ast_object: ast.List):
+def _list(ast_object: ast.List):
     return symbol([from_ast(k) for k in ast_object.elts])
 
 
 @from_ast.register
-def _(ast_object: ast.Tuple):
+def _tuple(ast_object: ast.Tuple):
     return symbol(tuple(from_ast(k) for k in ast_object.elts))
 
 
 @from_ast.register
-def _(ast_object: ast.Set):
+def _set(ast_object: ast.Set):
     return symbol(set(from_ast(k) for k in ast_object.elts))
 
 
 @from_ast.register
-def _(ast_object: ast.Slice):
+def _slice(ast_object: ast.Slice):
     return symbol(slice(from_ast(ast_object.lower),
                         from_ast(ast_object.upper),
                         from_ast(ast_object.step))
@@ -168,13 +164,13 @@ def _(ast_object: ast.Slice):
 
 
 @from_ast.register
-def _(ast_object: ast.Dict):
+def _dict(ast_object: ast.Dict):
     return symbol({from_ast(k): from_ast(v)
                    for k, v in zip(ast_object.keys, ast_object.values)})
 
 
 @from_ast.register
-def _(ast_object: ast.BinOp):
+def _binop(ast_object: ast.BinOp):
     head = Head.binop
     args = [AST_BINOP_MAP[type(ast_object.op)], from_ast(
         ast_object.left), from_ast(ast_object.right)]
@@ -182,7 +178,7 @@ def _(ast_object: ast.BinOp):
 
 
 @from_ast.register
-def _(ast_object: ast.BoolOp):
+def _boolop(ast_object: ast.BoolOp):
     head = Head.binop
     op = AST_BINOP_MAP[type(ast_object.op)]
     args = nest_binop(op, ast_object.values)
@@ -190,14 +186,14 @@ def _(ast_object: ast.BoolOp):
 
 
 @from_ast.register
-def _(ast_object: ast.Compare):
+def _compare(ast_object: ast.Compare):
     head = Head.binop
     args = nest_compare(ast_object.ops, [ast_object.left] + ast_object.comparators)
     return Expr(head, args)
 
 
 @from_ast.register
-def _(ast_object: ast.If):
+def _if(ast_object: ast.If):
     head = Head.if_
     args = [from_ast(ast_object.test),
             from_ast(ast_object.body),
@@ -206,7 +202,7 @@ def _(ast_object: ast.If):
 
 
 @from_ast.register
-def _(ast_object: ast.For):
+def _for(ast_object: ast.For):
     head = Head.for_
     top = Expr(Head.binop, [Symbol.var("in"), from_ast(
         ast_object.target), from_ast(ast_object.iter)])
@@ -217,7 +213,7 @@ def _(ast_object: ast.For):
 
 
 @from_ast.register
-def _(ast_object: ast.While):
+def _while(ast_object: ast.While):
     head = Head.while_
     test = from_ast(ast_object.test)
     block = from_ast(ast_object.body)
@@ -227,14 +223,14 @@ def _(ast_object: ast.While):
 
 
 @from_ast.register
-def _(ast_object: list):
+def _list_of_ast(ast_object: list):
     head = Head.block
     args = [from_ast(k) for k in ast_object]
     return Expr(head, args)
 
 
 @from_ast.register
-def _(ast_object: ast.FunctionDef):
+def _function_def(ast_object: ast.FunctionDef):
     # TODO: positional only etc. are not supported
     head = Head.function
     fname = Symbol(ast_object.name)
@@ -248,7 +244,7 @@ def _(ast_object: ast.FunctionDef):
 
 
 @from_ast.register
-def _(ast_object: ast.arg):
+def _arg(ast_object: ast.arg):
     ann = ast_object.annotation
     if ast_object.annotation is not None:
         return Expr(Head.annotate, [Symbol(ast_object.arg), from_ast(ann)])
@@ -257,7 +253,7 @@ def _(ast_object: ast.arg):
 
 
 @from_ast.register
-def _(ast_object: ast.AnnAssign):
+def _annotated_assign(ast_object: ast.AnnAssign):
     head = Head.assign
     target = from_ast(ast_object.target)
     args = [Expr(Head.annotate, [target, from_ast(ast_object.annotation)]),
@@ -266,22 +262,22 @@ def _(ast_object: ast.AnnAssign):
 
 
 @from_ast.register
-def _(ast_object: ast.Pass):
+def _pass(ast_object: ast.Pass):
     return Symbol.var("pass")
 
 
 @from_ast.register
-def _(ast_object: ast.Break):
+def _break(ast_object: ast.Break):
     return Symbol.var("break")
 
 
 @from_ast.register
-def _(ast_object: ast.Continue):
+def _continue(ast_object: ast.Continue):
     return Symbol.var("continue")
 
 
 @from_ast.register
-def _(ast_object: ast.Raise):
+def _raise(ast_object: ast.Raise):
     exc = ast_object.exc
     if ast_object.cause:
         raise ValueError("'raise XX from YY' is not supported yet")
@@ -289,7 +285,7 @@ def _(ast_object: ast.Raise):
 
 
 @from_ast.register
-def _(ast_object: ast.Return):
+def _return(ast_object: ast.Return):
     head = Head.return_
     args = [from_ast(ast_object.value)]
     return Expr(head, args)

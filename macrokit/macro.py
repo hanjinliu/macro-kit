@@ -225,6 +225,18 @@ class Macro(Expr, MutableSequence[Expr]):
 
     @overload
     def record(
+        self, obj: classmethod, *, returned_callback: MetaCallable = None
+    ) -> mClassMethod:
+        ...
+
+    @overload
+    def record(
+        self, obj: staticmethod, *, returned_callback: MetaCallable = None
+    ) -> mStaticMethod:
+        ...
+
+    @overload
+    def record(
         self, *, returned_callback: MetaCallable = None
     ) -> Callable[[Recordable], mObject | MacroMixin]:
         ...

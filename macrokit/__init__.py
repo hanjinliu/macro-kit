@@ -1,12 +1,13 @@
-__version__ = "0.3.5"
+__version__ = "0.3.6.dev0"
 
 from .symbol import Symbol, register_type
 from .expression import Expr, Head, symbol
 from .macro import Macro, MacroFlags
+from .mock import Mock
 from .ast import parse
 from functools import wraps
 
-__all__ = ["Symbol", "Head", "Expr", "Macro",
+__all__ = ["Symbol", "Head", "Expr", "Macro", "Mock",
            "symbol", "register_type", "parse",
            "blocked", "record", "property", "dump", "get_macro", "set_flags"
            ]

@@ -7,6 +7,8 @@ from .mock import Mock
 from .ast import parse
 from functools import wraps
 
+register_type(Mock, lambda mock: mock.expr)
+
 __all__ = ["Symbol", "Head", "Expr", "Macro", "Mock",
            "symbol", "register_type", "parse",
            "blocked", "record", "property", "dump", "get_macro", "set_flags"

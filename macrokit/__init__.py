@@ -1,4 +1,4 @@
-__version__ = "0.3.6.dev0"
+__version__ = "0.3.6"
 
 from .symbol import Symbol, register_type
 from .expression import Expr, Head, symbol
@@ -7,7 +7,6 @@ from .mock import Mock
 from .ast import parse
 from functools import wraps
 
-register_type(Mock, lambda mock: mock.expr)
 
 __all__ = ["Symbol", "Head", "Expr", "Macro", "Mock",
            "symbol", "register_type", "parse",

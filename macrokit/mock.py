@@ -6,6 +6,7 @@ from .macro import BINOP_MAP, UNOP_MAP
 from .head import Head
 
 
+@Symbol.register_type(lambda mock: mock.expr)
 class Mock:
     """
     Helper class for easier Expr object handling.

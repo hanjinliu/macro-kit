@@ -1485,6 +1485,7 @@ static const char __pyx_k__6[] = "'";
 static const char __pyx_k_eq[] = "__eq__";
 static const char __pyx_k_id[] = "id";
 static const char __pyx_k_Any[] = "Any";
+static const char __pyx_k_Set[] = "Set";
 static const char __pyx_k_cls[] = "cls";
 static const char __pyx_k_doc[] = "__doc__";
 static const char __pyx_k_int[] = "int";
@@ -1527,6 +1528,7 @@ static const char __pyx_k_inspect[] = "inspect";
 static const char __pyx_k_newname[] = "newname";
 static const char __pyx_k_prepare[] = "__prepare__";
 static const char __pyx_k_unicode[] = "unicode";
+static const char __pyx_k_COMPILED[] = "COMPILED";
 static const char __pyx_k_Callable[] = "Callable";
 static const char __pyx_k_Optional[] = "Optional";
 static const char __pyx_k_constant[] = "constant";
@@ -1564,7 +1566,6 @@ static const char __pyx_k_register_type[] = "_register_type";
 static const char __pyx_k_AttributeError[] = "AttributeError";
 static const char __pyx_k_module_symbols[] = "_module_symbols";
 static const char __pyx_k_register_type_2[] = "register_type";
-static const char __pyx_k_symbol_compiled[] = "_symbol_compiled";
 static const char __pyx_k_Symbol__reserved[] = "Symbol._reserved";
 static const char __pyx_k_macrokit__symbol[] = "macrokit._symbol";
 static const char __pyx_k_type_or_function[] = "type_or_function";
@@ -1589,6 +1590,7 @@ static PyObject *__pyx_kp_s_A_class_that_represents_Python_s;
 static PyObject *__pyx_n_s_Any;
 static PyObject *__pyx_n_s_AttributeError;
 static PyObject *__pyx_n_s_BuiltinFunctionType;
+static PyObject *__pyx_n_s_COMPILED;
 static PyObject *__pyx_n_s_Callable;
 static PyObject *__pyx_kp_u_Cannot_set_non_string_to_name;
 static PyObject *__pyx_n_s_Dict;
@@ -1600,6 +1602,7 @@ static PyObject *__pyx_n_u_None;
 static PyObject *__pyx_n_s_Optional;
 static PyObject *__pyx_n_s_POSITIONAL_OR_KEYWORD;
 static PyObject *__pyx_n_s_Parameter;
+static PyObject *__pyx_n_s_Set;
 static PyObject *__pyx_n_s_Symbol;
 static PyObject *__pyx_n_s_Symbol___eq;
 static PyObject *__pyx_n_s_Symbol___hash;
@@ -1685,7 +1688,6 @@ static PyObject *__pyx_n_s_step;
 static PyObject *__pyx_n_s_stop;
 static PyObject *__pyx_n_s_str;
 static PyObject *__pyx_n_s_subclass_map;
-static PyObject *__pyx_n_s_symbol_compiled;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_type;
 static PyObject *__pyx_n_s_type_2;
@@ -1767,7 +1769,7 @@ static PyObject *__pyx_codeobj__44;
 
 /* "macrokit/_symbol.py":13
  *     # Map of how to convert object into a symbol.
- *     _type_map: dict[type, Callable] = {
+ *     _type_map: Dict[type, Callable] = {
  *         type: lambda e: e.__name__,             # <<<<<<<<<<<<<<
  *         FunctionType: lambda e: e.__name__,
  *         BuiltinFunctionType: lambda e: e.__name__,
@@ -1814,7 +1816,7 @@ static PyObject *__pyx_lambda_funcdef_8macrokit_7_symbol_6Symbol_lambda(CYTHON_U
 }
 
 /* "macrokit/_symbol.py":14
- *     _type_map: dict[type, Callable] = {
+ *     _type_map: Dict[type, Callable] = {
  *         type: lambda e: e.__name__,
  *         FunctionType: lambda e: e.__name__,             # <<<<<<<<<<<<<<
  *         BuiltinFunctionType: lambda e: e.__name__,
@@ -2101,7 +2103,7 @@ static PyObject *__pyx_lambda_funcdef_8macrokit_7_symbol_6Symbol_lambda5(CYTHON_
 }
 
 /* "macrokit/_symbol.py":37
- *     _module_map: dict[str, ModuleType] = {}
+ *     _module_map: Dict[str, ModuleType] = {}
  *
  *     def __init__(self, seq: Any, object_id: int = None):             # <<<<<<<<<<<<<<
  *         self._name = str(seq)
@@ -2244,7 +2246,7 @@ static PyObject *__pyx_pf_8macrokit_7_symbol_6Symbol___init__(CYTHON_UNUSED PyOb
   if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_constant, Py_True) < 0) __PYX_ERR(0, 40, __pyx_L1_error)
 
   /* "macrokit/_symbol.py":37
- *     _module_map: dict[str, ModuleType] = {}
+ *     _module_map: Dict[str, ModuleType] = {}
  *
  *     def __init__(self, seq: Any, object_id: int = None):             # <<<<<<<<<<<<<<
  *         self._name = str(seq)
@@ -4804,6 +4806,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_Any, __pyx_k_Any, sizeof(__pyx_k_Any), 0, 0, 1, 1},
   {&__pyx_n_s_AttributeError, __pyx_k_AttributeError, sizeof(__pyx_k_AttributeError), 0, 0, 1, 1},
   {&__pyx_n_s_BuiltinFunctionType, __pyx_k_BuiltinFunctionType, sizeof(__pyx_k_BuiltinFunctionType), 0, 0, 1, 1},
+  {&__pyx_n_s_COMPILED, __pyx_k_COMPILED, sizeof(__pyx_k_COMPILED), 0, 0, 1, 1},
   {&__pyx_n_s_Callable, __pyx_k_Callable, sizeof(__pyx_k_Callable), 0, 0, 1, 1},
   {&__pyx_kp_u_Cannot_set_non_string_to_name, __pyx_k_Cannot_set_non_string_to_name, sizeof(__pyx_k_Cannot_set_non_string_to_name), 0, 1, 0, 0},
   {&__pyx_n_s_Dict, __pyx_k_Dict, sizeof(__pyx_k_Dict), 0, 0, 1, 1},
@@ -4815,6 +4818,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_Optional, __pyx_k_Optional, sizeof(__pyx_k_Optional), 0, 0, 1, 1},
   {&__pyx_n_s_POSITIONAL_OR_KEYWORD, __pyx_k_POSITIONAL_OR_KEYWORD, sizeof(__pyx_k_POSITIONAL_OR_KEYWORD), 0, 0, 1, 1},
   {&__pyx_n_s_Parameter, __pyx_k_Parameter, sizeof(__pyx_k_Parameter), 0, 0, 1, 1},
+  {&__pyx_n_s_Set, __pyx_k_Set, sizeof(__pyx_k_Set), 0, 0, 1, 1},
   {&__pyx_n_s_Symbol, __pyx_k_Symbol, sizeof(__pyx_k_Symbol), 0, 0, 1, 1},
   {&__pyx_n_s_Symbol___eq, __pyx_k_Symbol___eq, sizeof(__pyx_k_Symbol___eq), 0, 0, 1, 1},
   {&__pyx_n_s_Symbol___hash, __pyx_k_Symbol___hash, sizeof(__pyx_k_Symbol___hash), 0, 0, 1, 1},
@@ -4900,7 +4904,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_stop, __pyx_k_stop, sizeof(__pyx_k_stop), 0, 0, 1, 1},
   {&__pyx_n_s_str, __pyx_k_str, sizeof(__pyx_k_str), 0, 0, 1, 1},
   {&__pyx_n_s_subclass_map, __pyx_k_subclass_map, sizeof(__pyx_k_subclass_map), 0, 0, 1, 1},
-  {&__pyx_n_s_symbol_compiled, __pyx_k_symbol_compiled, sizeof(__pyx_k_symbol_compiled), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_type, __pyx_k_type, sizeof(__pyx_k_type), 0, 0, 1, 1},
   {&__pyx_n_s_type_2, __pyx_k_type_2, sizeof(__pyx_k_type_2), 0, 0, 1, 1},
@@ -4987,7 +4990,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__11, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_macrokit__symbol_py, __pyx_n_s_register_type, 178, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 178, __pyx_L1_error)
 
   /* "macrokit/_symbol.py":5
- * from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
+ * from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
  *
  * T = TypeVar("T")             # <<<<<<<<<<<<<<
  *
@@ -4998,7 +5001,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__13);
 
   /* "macrokit/_symbol.py":37
- *     _module_map: dict[str, ModuleType] = {}
+ *     _module_map: Dict[str, ModuleType] = {}
  *
  *     def __init__(self, seq: Any, object_id: int = None):             # <<<<<<<<<<<<<<
  *         self._name = str(seq)
@@ -5495,7 +5498,7 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":1
  * import inspect             # <<<<<<<<<<<<<<
  * from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
- * from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
+ * from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
  */
   __pyx_t_1 = __Pyx_patch_inspect(__Pyx_Import(__pyx_n_s_inspect, 0, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -5505,7 +5508,7 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":2
  * import inspect
  * from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType             # <<<<<<<<<<<<<<
- * from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
+ * from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
  *
  */
   __pyx_t_1 = PyList_New(4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 2, __pyx_L1_error)
@@ -5546,11 +5549,11 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":3
  * import inspect
  * from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
- * from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional             # <<<<<<<<<<<<<<
+ * from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional             # <<<<<<<<<<<<<<
  *
  * T = TypeVar("T")
  */
-  __pyx_t_2 = PyList_New(7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
+  __pyx_t_2 = PyList_New(8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_n_s_Any);
   __Pyx_GIVEREF(__pyx_n_s_Any);
@@ -5561,18 +5564,21 @@ if (!__Pyx_RefNanny) {
   __Pyx_INCREF(__pyx_n_s_Dict);
   __Pyx_GIVEREF(__pyx_n_s_Dict);
   PyList_SET_ITEM(__pyx_t_2, 2, __pyx_n_s_Dict);
+  __Pyx_INCREF(__pyx_n_s_Set);
+  __Pyx_GIVEREF(__pyx_n_s_Set);
+  PyList_SET_ITEM(__pyx_t_2, 3, __pyx_n_s_Set);
   __Pyx_INCREF(__pyx_n_s_Type);
   __Pyx_GIVEREF(__pyx_n_s_Type);
-  PyList_SET_ITEM(__pyx_t_2, 3, __pyx_n_s_Type);
+  PyList_SET_ITEM(__pyx_t_2, 4, __pyx_n_s_Type);
   __Pyx_INCREF(__pyx_n_s_TypeVar);
   __Pyx_GIVEREF(__pyx_n_s_TypeVar);
-  PyList_SET_ITEM(__pyx_t_2, 4, __pyx_n_s_TypeVar);
+  PyList_SET_ITEM(__pyx_t_2, 5, __pyx_n_s_TypeVar);
   __Pyx_INCREF(__pyx_n_s_overload);
   __Pyx_GIVEREF(__pyx_n_s_overload);
-  PyList_SET_ITEM(__pyx_t_2, 5, __pyx_n_s_overload);
+  PyList_SET_ITEM(__pyx_t_2, 6, __pyx_n_s_overload);
   __Pyx_INCREF(__pyx_n_s_Optional);
   __Pyx_GIVEREF(__pyx_n_s_Optional);
-  PyList_SET_ITEM(__pyx_t_2, 6, __pyx_n_s_Optional);
+  PyList_SET_ITEM(__pyx_t_2, 7, __pyx_n_s_Optional);
   __pyx_t_1 = __Pyx_Import(__pyx_n_s_typing, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -5587,6 +5593,10 @@ if (!__Pyx_RefNanny) {
   __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_Dict); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_Dict, __pyx_t_2) < 0) __PYX_ERR(0, 3, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_Set); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Set, __pyx_t_2) < 0) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_Type); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -5607,7 +5617,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "macrokit/_symbol.py":5
- * from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
+ * from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
  *
  * T = TypeVar("T")             # <<<<<<<<<<<<<<
  *
@@ -5633,7 +5643,7 @@ if (!__Pyx_RefNanny) {
 
   /* "macrokit/_symbol.py":13
  *     # Map of how to convert object into a symbol.
- *     _type_map: dict[type, Callable] = {
+ *     _type_map: Dict[type, Callable] = {
  *         type: lambda e: e.__name__,             # <<<<<<<<<<<<<<
  *         FunctionType: lambda e: e.__name__,
  *         BuiltinFunctionType: lambda e: e.__name__,
@@ -5646,7 +5656,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
   /* "macrokit/_symbol.py":14
- *     _type_map: dict[type, Callable] = {
+ *     _type_map: Dict[type, Callable] = {
  *         type: lambda e: e.__name__,
  *         FunctionType: lambda e: e.__name__,             # <<<<<<<<<<<<<<
  *         BuiltinFunctionType: lambda e: e.__name__,
@@ -5779,7 +5789,7 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":28
  *
  *     # Map to speed up type check
- *     _subclass_map: dict[type, type] = {}             # <<<<<<<<<<<<<<
+ *     _subclass_map: Dict[type, type] = {}             # <<<<<<<<<<<<<<
  *
  *     # ID of global variables
  */
@@ -5791,7 +5801,7 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":31
  *
  *     # ID of global variables
- *     _variables: set[int] = set()             # <<<<<<<<<<<<<<
+ *     _variables: Set[int] = set()             # <<<<<<<<<<<<<<
  *
  *     # Module symbols
  */
@@ -5803,8 +5813,8 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":34
  *
  *     # Module symbols
- *     _module_symbols: dict[int, "Symbol"] = {}             # <<<<<<<<<<<<<<
- *     _module_map: dict[str, ModuleType] = {}
+ *     _module_symbols: Dict[int, "Symbol"] = {}             # <<<<<<<<<<<<<<
+ *     _module_map: Dict[str, ModuleType] = {}
  *
  */
   __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 34, __pyx_L1_error)
@@ -5814,8 +5824,8 @@ if (!__Pyx_RefNanny) {
 
   /* "macrokit/_symbol.py":35
  *     # Module symbols
- *     _module_symbols: dict[int, "Symbol"] = {}
- *     _module_map: dict[str, ModuleType] = {}             # <<<<<<<<<<<<<<
+ *     _module_symbols: Dict[int, "Symbol"] = {}
+ *     _module_map: Dict[str, ModuleType] = {}             # <<<<<<<<<<<<<<
  *
  *     def __init__(self, seq: Any, object_id: int = None):
  */
@@ -5825,7 +5835,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "macrokit/_symbol.py":37
- *     _module_map: dict[str, ModuleType] = {}
+ *     _module_map: Dict[str, ModuleType] = {}
  *
  *     def __init__(self, seq: Any, object_id: int = None):             # <<<<<<<<<<<<<<
  *         self._name = str(seq)
@@ -6575,15 +6585,15 @@ if (!__Pyx_RefNanny) {
  * try:
  *     import cython             # <<<<<<<<<<<<<<
  * except ImportError:  # pragma: no cover
- *     _symbol_compiled: bool = False
+ *     COMPILED: bool = False
  */
     }
 
     /* "macrokit/_symbol.py":193
- *     _symbol_compiled: bool = False
+ *     COMPILED: bool = False
  * else:  # pragma: no cover
  *     try:             # <<<<<<<<<<<<<<
- *         _symbol_compiled = cython.compiled
+ *         COMPILED = cython.compiled
  *     except AttributeError:
  */
     /*else:*/ {
@@ -6599,17 +6609,17 @@ if (!__Pyx_RefNanny) {
           /* "macrokit/_symbol.py":194
  * else:  # pragma: no cover
  *     try:
- *         _symbol_compiled = cython.compiled             # <<<<<<<<<<<<<<
+ *         COMPILED = cython.compiled             # <<<<<<<<<<<<<<
  *     except AttributeError:
- *         _symbol_compiled = False
+ *         COMPILED = False
  */
-          if (PyDict_SetItem(__pyx_d, __pyx_n_s_symbol_compiled, Py_True) < 0) __PYX_ERR(0, 194, __pyx_L8_error)
+          if (PyDict_SetItem(__pyx_d, __pyx_n_s_COMPILED, Py_True) < 0) __PYX_ERR(0, 194, __pyx_L8_error)
 
           /* "macrokit/_symbol.py":193
- *     _symbol_compiled: bool = False
+ *     COMPILED: bool = False
  * else:  # pragma: no cover
  *     try:             # <<<<<<<<<<<<<<
- *         _symbol_compiled = cython.compiled
+ *         COMPILED = cython.compiled
  *     except AttributeError:
  */
         }
@@ -6631,9 +6641,9 @@ if (!__Pyx_RefNanny) {
 
         /* "macrokit/_symbol.py":195
  *     try:
- *         _symbol_compiled = cython.compiled
+ *         COMPILED = cython.compiled
  *     except AttributeError:             # <<<<<<<<<<<<<<
- *         _symbol_compiled = False
+ *         COMPILED = False
  */
         __pyx_t_17 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_AttributeError);
         if (__pyx_t_17) {
@@ -6644,11 +6654,11 @@ if (!__Pyx_RefNanny) {
           __Pyx_GOTREF(__pyx_t_1);
 
           /* "macrokit/_symbol.py":196
- *         _symbol_compiled = cython.compiled
+ *         COMPILED = cython.compiled
  *     except AttributeError:
- *         _symbol_compiled = False             # <<<<<<<<<<<<<<
+ *         COMPILED = False             # <<<<<<<<<<<<<<
  */
-          if (PyDict_SetItem(__pyx_d, __pyx_n_s_symbol_compiled, Py_False) < 0) __PYX_ERR(0, 196, __pyx_L10_except_error)
+          if (PyDict_SetItem(__pyx_d, __pyx_n_s_COMPILED, Py_False) < 0) __PYX_ERR(0, 196, __pyx_L10_except_error)
           __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
           __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -6658,10 +6668,10 @@ if (!__Pyx_RefNanny) {
         __pyx_L10_except_error:;
 
         /* "macrokit/_symbol.py":193
- *     _symbol_compiled: bool = False
+ *     COMPILED: bool = False
  * else:  # pragma: no cover
  *     try:             # <<<<<<<<<<<<<<
- *         _symbol_compiled = cython.compiled
+ *         COMPILED = cython.compiled
  *     except AttributeError:
  */
         __Pyx_XGIVEREF(__pyx_t_14);
@@ -6694,7 +6704,7 @@ if (!__Pyx_RefNanny) {
   /* "macrokit/_symbol.py":1
  * import inspect             # <<<<<<<<<<<<<<
  * from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
- * from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
+ * from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
  */
   __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);

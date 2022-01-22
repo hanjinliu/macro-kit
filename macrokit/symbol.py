@@ -1,19 +1,25 @@
 from __future__ import annotations
+
 import inspect
-from typing import Callable, Any, TypeVar, overload
+from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
+from typing import Any, Callable, TypeVar, overload
+
 from typing_extensions import TypedDict
-from types import FunctionType, BuiltinFunctionType, ModuleType, MethodType
 
 T = TypeVar("T")
 
 
 class SymbolDict(TypedDict):
+    """Dictionary representin a Symbol object."""
+
     name: str
     object_id: int
     constant: bool
 
 
 class Symbol:
+    """A class that represents Python symbol in the context of metaprogramming."""
+
     # Map of how to convert object into a symbol.
     _type_map: dict[type, Callable] = {
         type: lambda e: e.__name__,
@@ -46,6 +52,7 @@ class Symbol:
         self.constant = True
 
     def asdict(self) -> SymbolDict:
+        """Convert Symbol object into a dict."""
         return {
             "name": self.name,
             "object_id": self.object_id,
@@ -54,6 +61,7 @@ class Symbol:
 
     @property
     def name(self) -> str:
+        """Symbol name as a string."""
         return self._name
 
     @name.setter
@@ -63,21 +71,25 @@ class Symbol:
         self._name = newname
 
     def __repr__(self) -> str:
+        """Return a Julia-like repr."""
         if self.constant:
             return self._name
         else:
             return ":" + self._name
 
     def __str__(self) -> str:
+        """Symbol name as a string."""
         return self._name
 
     def __hash__(self) -> int:
+        """Hashed by object ID and whether object is a constant."""
         # To ensure Symbol to be hash safe, we have to consider both object ID and
         # whether the Symbol is a constant because object ID of a variable is defined
         # by the hash value of the identifier.
         return self.object_id * 2 + int(self.constant)
 
     def __eq__(self, other) -> bool:
+        """Return true only if Symbol with same object is given."""
         if not isinstance(other, Symbol):
             return False
         return self.object_id == other.object_id and self.constant == other.constant
@@ -85,8 +97,9 @@ class Symbol:
     @classmethod
     def var(cls, identifier: str):
         """
-        Make a variable symbol. Same indentifier with same type always returns identical
-        symbol.
+        Make a variable symbol.
+
+        Same indentifier with same type always returns identical symbol.
         """
         if not isinstance(identifier, str):
             raise TypeError("'identifier' must be str")
@@ -111,6 +124,11 @@ class Symbol:
 
     @overload
     @classmethod
+    def register_type(cls, type: type[T], function: Callable[[T], Any] | None) -> None:
+        ...
+
+    @overload
+    @classmethod
     def register_type(
         cls, type: type[T]
     ) -> Callable[[Callable[[T], Any]], Callable[[T], Any]]:
@@ -118,14 +136,7 @@ class Symbol:
 
     @overload
     @classmethod
-    def register_type(
-        cls, function: Callable[[T], Any]
-    ) -> Callable[[type[T]], type[T]]:
-        ...
-
-    @overload
-    @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], Any] | None) -> None:
+    def register_type(cls, func: Callable[[T], Any]) -> Callable[[type[T]], type[T]]:
         ...
 
     @classmethod
@@ -158,7 +169,7 @@ class Symbol:
         """
         if isinstance(type_or_function, type):
 
-            def _register_function(func):
+            def _register_function(func: Callable[[T], Any]):
                 if not callable(func):
                     raise TypeError("The second argument must be callable.")
                 cls._type_map[type_or_function] = func
@@ -168,22 +179,19 @@ class Symbol:
                 _register_function if function is None else _register_function(function)
             )
 
-        elif isinstance(type_or_function, Callable):
-            if function is not None:
-                raise TypeError("")
+        else:
+            if function is not None or not callable(type_or_function):
+                raise TypeError(
+                    "'register_type' must take type or function as arguments."
+                )
 
-            def _register_type(type_: type):
+            def _register_type(type_: type[T]) -> type[T]:
                 if not isinstance(type_, type):
                     raise TypeError(f"Type expected, got {type(type_)}")
                 cls._type_map[type_] = type_or_function
                 return type_
 
             return _register_type
-
-        else:
-            raise TypeError(
-                "Arguments of 'register_type' must be type and/or function."
-            )
 
 
 register_type = Symbol.register_type

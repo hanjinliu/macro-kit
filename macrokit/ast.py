@@ -1,12 +1,13 @@
 from __future__ import annotations
-import sys
+
 import ast
-from functools import singledispatch
 import inspect
+import sys
+from functools import singledispatch
 from typing import Callable
 
-from .symbol import Symbol
 from .expression import Expr, Head, symbol
+from .symbol import Symbol
 
 NoneType = type(None)
 
@@ -45,9 +46,7 @@ AST_UNOP_MAP = {
 
 
 def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
-    """
-    Convert Python code string into Expr/Symbol objects.
-    """
+    """Convert Python code string into Expr/Symbol objects."""
     if callable(source):
         source = inspect.getsource(source)
     body = ast.parse(source).body
@@ -65,9 +64,7 @@ def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
 
 @singledispatch
 def from_ast(ast_object: ast.AST | list | NoneType):
-    """
-    Convert AST object to macro-kit object.
-    """
+    """Convert AST object to macro-kit object."""
     raise NotImplementedError(f"AST type {type(ast_object)} cannot be converted now.")
 
 
@@ -82,6 +79,7 @@ def _expr(ast_object: ast.Expr):
 
 
 if sys.version_info < (3, 8):
+
     @from_ast.register
     def _(ast_object: ast.Num):
         return symbol(ast_object.n)
@@ -103,6 +101,7 @@ if sys.version_info < (3, 8):
         return symbol(ast_object.s)
 
 else:
+
     @from_ast.register
     def _constant(ast_object: ast.Constant):
         return symbol(ast_object.value)
@@ -118,8 +117,9 @@ def _name(ast_object: ast.Name):
 
 @from_ast.register
 def _unaryop(ast_object: ast.UnaryOp):
-    return Expr(Head.unop, [AST_UNOP_MAP[type(ast_object.op)],
-                            from_ast(ast_object.operand)])
+    return Expr(
+        Head.unop, [AST_UNOP_MAP[type(ast_object.op)], from_ast(ast_object.operand)]
+    )
 
 
 @from_ast.register
@@ -133,8 +133,14 @@ def _augassign(ast_object: ast.AugAssign):
 @from_ast.register
 def _call(ast_object: ast.Call):
     head = Head.call
-    args = [from_ast(ast_object.func)] + [from_ast(k) for k in ast_object.args] + \
-        [Expr(Head.kw, [Symbol(k.arg), from_ast(k.value)]) for k in ast_object.keywords]
+    args = (
+        [from_ast(ast_object.func)]
+        + [from_ast(k) for k in ast_object.args]
+        + [
+            Expr(Head.kw, [Symbol(k.arg), from_ast(k.value)])
+            for k in ast_object.keywords
+        ]
+    )
     return Expr(head, args)
 
 
@@ -175,28 +181,35 @@ def _tuple(ast_object: ast.Tuple):
 
 @from_ast.register
 def _set(ast_object: ast.Set):
-    return symbol(set(from_ast(k) for k in ast_object.elts))
+    return symbol({from_ast(k) for k in ast_object.elts})
 
 
 @from_ast.register
 def _slice(ast_object: ast.Slice):
-    return symbol(slice(from_ast(ast_object.lower),
-                        from_ast(ast_object.upper),
-                        from_ast(ast_object.step))
-                  )
+    return symbol(
+        slice(
+            from_ast(ast_object.lower),
+            from_ast(ast_object.upper),
+            from_ast(ast_object.step),
+        )
+    )
 
 
 @from_ast.register
 def _dict(ast_object: ast.Dict):
-    return symbol({from_ast(k): from_ast(v)
-                   for k, v in zip(ast_object.keys, ast_object.values)})
+    return symbol(
+        {from_ast(k): from_ast(v) for k, v in zip(ast_object.keys, ast_object.values)}
+    )
 
 
 @from_ast.register
 def _binop(ast_object: ast.BinOp):
     head = Head.binop
-    args = [AST_BINOP_MAP[type(ast_object.op)], from_ast(
-        ast_object.left), from_ast(ast_object.right)]
+    args = [
+        AST_BINOP_MAP[type(ast_object.op)],
+        from_ast(ast_object.left),
+        from_ast(ast_object.right),
+    ]
     return Expr(head, args)
 
 
@@ -204,31 +217,35 @@ def _binop(ast_object: ast.BinOp):
 def _boolop(ast_object: ast.BoolOp):
     head = Head.binop
     op = AST_BINOP_MAP[type(ast_object.op)]
-    args = nest_binop(op, ast_object.values)
+    args = _nest_binop(op, ast_object.values)
     return Expr(head, args)
 
 
 @from_ast.register
 def _compare(ast_object: ast.Compare):
     head = Head.binop
-    args = nest_compare(ast_object.ops, [ast_object.left] + ast_object.comparators)
+    args = _nest_compare(ast_object.ops, [ast_object.left] + ast_object.comparators)
     return Expr(head, args)
 
 
 @from_ast.register
 def _if(ast_object: ast.If):
     head = Head.if_
-    args = [from_ast(ast_object.test),
-            from_ast(ast_object.body),
-            from_ast(ast_object.orelse)]
+    args = [
+        from_ast(ast_object.test),
+        from_ast(ast_object.body),
+        from_ast(ast_object.orelse),
+    ]
     return Expr(head, args)
 
 
 @from_ast.register
 def _for(ast_object: ast.For):
     head = Head.for_
-    top = Expr(Head.binop, [Symbol.var("in"), from_ast(
-        ast_object.target), from_ast(ast_object.iter)])
+    top = Expr(
+        Head.binop,
+        [Symbol.var("in"), from_ast(ast_object.target), from_ast(ast_object.iter)],
+    )
     block = from_ast(ast_object.body)
     if ast_object.orelse:
         raise ValueError("'else' block is not supported yet")
@@ -260,10 +277,17 @@ def _function_def(ast_object: ast.FunctionDef):
     fargs = ast_object.args
     nargs = len(fargs.args) - len(fargs.defaults)
     args = [from_ast(k) for k in fargs.args[:nargs]]
-    kwargs = [Expr(Head.kw, [from_ast(k), from_ast(v)])
-              for k, v in zip(fargs.args[nargs:], fargs.defaults)]
-    return Expr(head, [Expr(Head.call, [fname] + args + kwargs),
-                       from_ast(ast_object.body)])
+    kwargs = [
+        Expr(Head.kw, [from_ast(k), from_ast(v)])
+        for k, v in zip(fargs.args[nargs:], fargs.defaults)
+    ]
+    return Expr(
+        head,
+        [
+            Expr(Head.call, [fname] + args + kwargs),  # type: ignore
+            from_ast(ast_object.body),
+        ],
+    )
 
 
 @from_ast.register
@@ -279,8 +303,10 @@ def _arg(ast_object: ast.arg):
 def _annotated_assign(ast_object: ast.AnnAssign):
     head = Head.assign
     target = from_ast(ast_object.target)
-    args = [Expr(Head.annotate, [target, from_ast(ast_object.annotation)]),
-            from_ast(ast_object.value)]
+    args = [
+        Expr(Head.annotate, [target, from_ast(ast_object.annotation)]),
+        from_ast(ast_object.value),
+    ]
     return Expr(head, args)
 
 
@@ -314,23 +340,19 @@ def _return(ast_object: ast.Return):
     return Expr(head, args)
 
 
-def nest_binop(op, values: list[ast.expr]):
+def _nest_binop(op, values: list[ast.expr]):
     if len(values) == 2:
-        return [op,
-                from_ast(values[0]),
-                from_ast(values[1])]
+        return [op, from_ast(values[0]), from_ast(values[1])]
     else:
-        return [op,
-                from_ast(values[0]),
-                Expr(Head.binop, nest_binop(op, values[1:]))]
+        return [op, from_ast(values[0]), Expr(Head.binop, _nest_binop(op, values[1:]))]
 
 
-def nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
+def _nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
     if len(ops) == 1:
-        return [AST_BINOP_MAP[type(ops[0])],
-                from_ast(values[0]),
-                from_ast(values[1])]
+        return [AST_BINOP_MAP[type(ops[0])], from_ast(values[0]), from_ast(values[1])]
     else:
-        return [AST_BINOP_MAP[type(ops[0])],
-                from_ast(values[0]),
-                Expr(Head.binop, nest_compare(ops[1:], values[1:]))]
+        return [
+            AST_BINOP_MAP[type(ops[0])],
+            from_ast(values[0]),
+            Expr(Head.binop, _nest_compare(ops[1:], values[1:])),
+        ]

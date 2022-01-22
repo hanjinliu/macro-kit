@@ -8,20 +8,22 @@ _A = TypeVar("_A")
 
 
 class Validator(Generic[_T, _A]):
-    """
-    A validator class that will be used for Expr argument validation.
-    """
+    """A validator class that will be used for Expr argument validation."""
 
     def __init__(self):
         self._map: dict[_T, Callable[[_A], _A]] = {}
 
     def register(self, value: _T):
+        """Register value for validation."""
+
         def wrapper(func: Callable[[_A], _A]):
             self._map[value] = func
             return func
+
         return wrapper
 
     def __call__(self, arg: _T, *args: _A) -> _A | Iterable[_A]:
+        """Run validation."""
         try:
             func = self._map[arg]
         except KeyError:
@@ -35,7 +37,7 @@ class Validator(Generic[_T, _A]):
 
 
 class ValidationError(ValueError):
-    pass
+    """Raised when validation failed."""
 
 
 validator: Validator[Head, list[Any]] = Validator()

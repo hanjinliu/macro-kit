@@ -1,4 +1,4 @@
-from macrokit import Macro, Expr, Symbol, symbol, register_type, parse
+from macrokit import Expr, Macro, Symbol, parse, register_type, symbol
 
 
 def test_function():
@@ -31,18 +31,22 @@ def test_module():
     df0 = pd_.DataFrame({"a": [2, 3, 5], "b": [True, False, False]})
     df1 = pd_.DataFrame({"a": [8, 4, -1], "b": [True, True, False]})
     macro_str = str(macro.format([(df0, Symbol("df0")), (df1, Symbol("df1"))]))
-    assert macro_str == \
-        "df0 = pandas.DataFrame({'a': [2, 3, 5], 'b': [True, False, False]})\n" \
+    assert (
+        macro_str
+        == "df0 = pandas.DataFrame({'a': [2, 3, 5], 'b': [True, False, False]})\n"
         "df1 = pandas.DataFrame({'a': [8, 4, -1], 'b': [True, True, False]})"
+    )
 
     macro.eval()
     macro_str = str(macro.format([(df0, Symbol("df0")), (df1, Symbol("df1"))]))
-    assert macro_str == \
-        "df0 = pandas.DataFrame({'a': [2, 3, 5], 'b': [True, False, False]})\n" \
+    assert (
+        macro_str
+        == "df0 = pandas.DataFrame({'a': [2, 3, 5], 'b': [True, False, False]})\n"
         "df1 = pandas.DataFrame({'a': [8, 4, -1], 'b': [True, True, False]})"
+    )
 
-    import skimage
     import numpy as np
+    import skimage
 
     macro = Macro()
     skimage_ = macro.record(skimage)
@@ -50,24 +54,25 @@ def test_module():
     img = np_.random.normal(size=(128, 128))
     out = skimage_.filters.gaussian(img, sigma=2)
     thr = skimage_.filters.threshold_otsu(out)
-    macro_str = str(macro.format([(img, Symbol("img")),
-                                  (out, Symbol("out")),
-                                  (thr, Symbol("thr"))])
-                    )
-    assert macro_str == \
-        "img = numpy.random.normal(size=(128, 128))\n" \
-        "out = skimage.filters.gaussian(img, sigma=2)\n" \
+    macro_str = str(
+        macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])
+    )
+    assert (
+        macro_str == "img = numpy.random.normal(size=(128, 128))\n"
+        "out = skimage.filters.gaussian(img, sigma=2)\n"
         "thr = skimage.filters.threshold_otsu(out)"
+    )
 
     macro.eval()
 
-    macro_str = str(macro.format([(img, Symbol("img")),
-                                  (out, Symbol("out")),
-                                  (thr, Symbol("thr"))]))
-    assert macro_str == \
-        "img = numpy.random.normal(size=(128, 128))\n" \
-        "out = skimage.filters.gaussian(img, sigma=2)\n" \
+    macro_str = str(
+        macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])
+    )
+    assert (
+        macro_str == "img = numpy.random.normal(size=(128, 128))\n"
+        "out = skimage.filters.gaussian(img, sigma=2)\n"
         "thr = skimage.filters.threshold_otsu(out)"
+    )
 
     macro = Macro()
     df_ = Expr("getattr", [pd, pd.DataFrame])
@@ -77,16 +82,18 @@ def test_module():
     macro.append(expr1)
     macro.append(expr2)
     macro_str = str(macro)
-    assert macro_str == \
-        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
+    assert (
+        macro_str == "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n"
         "pandas.Series((1, 2, 3))"
+    )
 
     macro.eval()  # pandas should be registered in Symbol
     df_ = Expr("getattr", [pd, pd.DataFrame])
     ds_ = Expr("getattr", [pd, pd.Series])
-    assert macro_str == \
-        "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n" \
+    assert (
+        macro_str == "pandas.DataFrame({'a': [1, 2, 4], 'b': [True, False, False]})\n"
         "pandas.Series((1, 2, 3))"
+    )
 
 
 def test_format():
@@ -143,16 +150,14 @@ def test_class():
     a["a"] = False  # This line should not be recorded.
     a["a"] = True
 
-    macro_str = str(macro.format([(a, Symbol("a"))]))
-    assert (
-        macro_str == "a = A(4)\n"
-        "a.value_str\n"
-        "a.value_str = 5\n"
-        "a.getval()\n"
-        "A.set_class_var(10)\n"
-        "a['key']\n"
-        "a['a'] = True"
-    )
+    macro = macro.format([(a, Symbol("a"))])
+    assert str(macro[0]) == "a = A(4)"
+    assert str(macro[1]) == "a.value_str"
+    assert str(macro[2]) == "a.value_str = 5"
+    assert str(macro[3]) == "a.getval()"
+    assert str(macro[4]) == "A.set_class_var(10)"
+    assert str(macro[5]) == "a['key']"
+    assert str(macro[6]) == "a['a'] = True"
 
 
 def test_register_type():

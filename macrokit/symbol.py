@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import inspect
 from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
-from typing import Any, Callable, TypeVar, overload
+from typing import Any, Callable, TypeVar, overload, Optional
 
 from typing_extensions import TypedDict
 
@@ -43,7 +41,7 @@ class Symbol:
     _variables: set[int] = set()
 
     # Module symbols
-    _module_symbols: dict[int, Symbol] = {}
+    _module_symbols: dict[int, "Symbol"] = {}
     _module_map: dict[str, ModuleType] = {}
 
     def __init__(self, seq: Any, object_id: int = None):
@@ -124,7 +122,9 @@ class Symbol:
 
     @overload
     @classmethod
-    def register_type(cls, type: type[T], function: Callable[[T], Any] | None) -> None:
+    def register_type(
+        cls, type: type[T], function: Optional[Callable[[T], Any]]
+    ) -> None:
         ...
 
     @overload
@@ -195,3 +195,13 @@ class Symbol:
 
 
 register_type = Symbol.register_type
+
+try:
+    import cython
+except ImportError:  # pragma: no cover
+    _symbol_compiled: bool = False
+else:  # pragma: no cover
+    try:
+        _symbol_compiled = cython.compiled
+    except AttributeError:
+        _symbol_compiled = False

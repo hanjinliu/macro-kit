@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from copy import deepcopy
 from numbers import Number
 from types import ModuleType
-from typing import Any, Callable, Iterable, Iterator, overload
+from typing import Any, Callable, Iterable, Iterator, overload, Union
 
 from ._validator import validator
 from .head import EXEC, Head
@@ -39,7 +37,7 @@ def _comma(a, b):
     return f"{a}, {b}".rstrip(", ")
 
 
-_STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
+_STR_MAP: dict[Head, Callable[["Expr", int], str]] = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
     Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{str_(e.args[1])}]",
@@ -82,7 +80,7 @@ class Expr:
         return self._head
 
     @property
-    def args(self) -> list[Expr | Symbol]:
+    def args(self) -> list[Union["Expr", Symbol]]:
         """Return args of Expr."""
         return self._args
 
@@ -124,12 +122,12 @@ class Expr:
         s = self._dump()
         return s.rstrip("\n") + "\n"
 
-    def copy(self) -> Expr:
+    def copy(self) -> "Expr":
         """Copy Expr object."""
         # Always copy object deeply.
         return deepcopy(self)
 
-    def at(self, *indices: int) -> Symbol | Expr:
+    def at(self, *indices: int) -> Union[Symbol, "Expr"]:
         """
         Easier way of tandem get-item.
 
@@ -137,14 +135,15 @@ class Expr:
         descriptions during this function call. ``expr.at(i, j, k)`` is equivalent
         to ``expr.args[i].args[j].args[k]``.
         """
-        now = self
+        now: Union[Symbol, Expr] = self
         for i in indices:
+            if isinstance(now, Symbol):
+                raise TypeError(f"Indexing encounted Symbol at position {i}.")
             try:
-                now = now._args[i]  # type: ignore
+                now = now._args[i]
             except IndexError as e:
                 raise type(e)(f"list index out of range at position {i}.")
-            except AttributeError as e:
-                raise type(e)(f"Indexing encounted Symbol at position {i}.")
+
         return now
 
     def eval(self, _globals: dict = {}, _locals: dict = {}):
@@ -170,7 +169,7 @@ class Expr:
 
         # use registered modules
         if Symbol._module_symbols:
-            format_dict: dict[Symbol, Symbol | Expr] = {}
+            format_dict: dict[Symbol, Union[Symbol, Expr]] = {}
             for id_, sym in Symbol._module_symbols.items():
                 mod = Symbol._module_map[sym.name]
                 vstr = f"var{hex(id_)}"
@@ -192,7 +191,7 @@ class Expr:
         func: Callable,
         args: tuple[Any, ...] = None,
         kwargs: dict = None,
-    ) -> Expr:
+    ) -> "Expr":
         """Parse ``obj.func(*args, **kwargs)``."""
         method = cls(head=Head.getattr, args=[symbol(obj), func])
         return cls.parse_call(method, args, kwargs)
@@ -204,7 +203,7 @@ class Expr:
         init_cls: type = None,
         args: tuple[Any, ...] = None,
         kwargs: dict = None,
-    ) -> Expr:
+    ) -> "Expr":
         """Parse ``obj = init_cls(*args, **kwargs)``."""
         if init_cls is None:
             init_cls = type(obj)
@@ -214,10 +213,10 @@ class Expr:
     @classmethod
     def parse_call(
         cls,
-        func: Callable | Symbol | Expr,
+        func: Union[Callable, Symbol, "Expr"],
         args: tuple[Any, ...] = None,
         kwargs: dict = None,
-    ) -> Expr:
+    ) -> "Expr":
         """Parse ``func(*args, **kwargs)``."""
         if args is None:
             args = ()
@@ -231,13 +230,13 @@ class Expr:
         return cls(head=Head.call, args=inputs)
 
     @classmethod
-    def parse_setitem(cls, obj: Any, key: Any, value: Any) -> Expr:
+    def parse_setitem(cls, obj: Any, key: Any, value: Any) -> "Expr":
         """Parse ``obj[key] = value)``."""
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
     @classmethod
-    def parse_setattr(cls, obj: Any, key: str, value: Any) -> Expr:
+    def parse_setattr(cls, obj: Any, key: str, value: Any) -> "Expr":
         """Parse ``obj.key = value``."""
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
@@ -253,7 +252,7 @@ class Expr:
         return inputs
 
     @classmethod
-    def parse_object(cls, a: Any) -> Symbol | Expr:
+    def parse_object(cls, a: Any) -> Union[Symbol, "Expr"]:
         """Convert an object into a macro-type."""
         return a if isinstance(a, cls) else symbol(a)
 
@@ -283,7 +282,7 @@ class Expr:
             else:
                 raise RuntimeError(f"{arg} (type {type(arg)})")
 
-    def iter_expr(self) -> Iterator[Expr]:
+    def iter_expr(self) -> Iterator["Expr"]:
         """
         Recursively iterate over all the nested Expr, until reaching to non-nested Expr.
 
@@ -299,16 +298,18 @@ class Expr:
             yield self
 
     @overload
-    def format(self, mapping: dict, inplace: bool = False) -> Expr:
+    def format(self, mapping: dict, inplace: bool = False) -> "Expr":
         ...
 
     @overload
     def format(
-        self, mapping: Iterable[tuple[Any, Symbol | Expr]], inplace: bool = False
-    ) -> Expr:
+        self,
+        mapping: Iterable[tuple[Any, Union[Symbol, "Expr"]]],
+        inplace: bool = False,
+    ) -> "Expr":
         ...
 
-    def format(self, mapping, inplace=False) -> Expr:
+    def format(self, mapping, inplace=False) -> "Expr":
         """
         Format expressions in the macro.
 
@@ -340,7 +341,7 @@ class Expr:
 
         return self._unsafe_format(mapping)
 
-    def _unsafe_format(self, mapping: dict) -> Expr:
+    def _unsafe_format(self, mapping: dict) -> "Expr":
         for i, arg in enumerate(self.args):
             if isinstance(arg, Expr):
                 arg._unsafe_format(mapping)
@@ -354,8 +355,8 @@ class Expr:
         return self
 
 
-def _check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Symbol | Expr]:
-    _dict: dict[Symbol, Symbol | Expr] = {}
+def _check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Union[Symbol, Expr]]:
+    _dict: dict[Symbol, Union[Symbol, Expr]] = {}
     for comp in mapping_list:
         if len(comp) != 2:
             raise ValueError("Wrong style of mapping list.")
@@ -386,7 +387,7 @@ def make_symbol_str(obj: Any):
     return f"var{hex(_id)}"
 
 
-def symbol(obj: Any, constant: bool = True) -> Symbol | Expr:
+def symbol(obj: Any, constant: bool = True) -> Union[Symbol, Expr]:
     """
     Make a proper Symbol or Expr instance from any objects.
 

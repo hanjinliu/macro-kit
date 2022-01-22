@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import Callable, Any, Hashable, TypeVar, Generic, Iterable
+from typing import Callable, Any, Hashable, TypeVar, Generic, Iterable, Union
 from .symbol import Symbol
 from .head import Head
 
@@ -22,7 +21,7 @@ class Validator(Generic[_T, _A]):
 
         return wrapper
 
-    def __call__(self, arg: _T, *args: _A) -> _A | Iterable[_A]:
+    def __call__(self, arg: _T, *args: _A) -> Union[_A, Iterable[_A]]:
         """Run validation."""
         try:
             func = self._map[arg]

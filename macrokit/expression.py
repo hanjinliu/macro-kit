@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import deepcopy
-from typing import Callable, Iterable, Iterator, Any, overload
+from typing import Callable, Iterable, Iterator, Any, overload, Mapping
 from types import ModuleType
 from numbers import Number
 from .symbol import Symbol
@@ -28,39 +28,32 @@ def sjoin(sep: str, iterable: Iterable[Any], indent: int = 0):
     return sep.join(str_(expr, indent) for expr in iterable)
 
 
+def _s_(n: int) -> str:
+    """Return spaces"""
+    return " " * n
+
+
 _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
     Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{str_(e.args[1])}]",
-    Head.del_: lambda e, i: " " * i + f"del {str_(e.args[0])}",
+    Head.del_: lambda e, i: f"{_s_(i)}del {str_(e.args[0])}",
     Head.call: lambda e, i: f"{str_(e.args[0], i)}({sjoin(', ', e.args[1:])})",
     Head.assign: lambda e, i: f"{str_(e.args[0], i)} = {e.args[1]}",
     Head.kw: lambda e, i: f"{str_(e.args[0])}={str_(e.args[1])}",
-    Head.assert_: lambda e, i: " " * i
-    + f"assert {str_(e.args[0])}, {str_(e.args[1])}".rstrip(", "),
-    Head.comment: lambda e, i: " " * i + f"# {e.args[0]}",
-    Head.unop: lambda e, i: " " * i + f"({str_(e.args[0])}{str_(e.args[1])})",
-    Head.binop: lambda e, i: " " * i
-    + f"({str_(e.args[1])} {str_(e.args[0])} {str_(e.args[2])})",
-    Head.aug: lambda e, i: " " * i
-    + f"{str_(e.args[1])} {str_(e.args[0])}= {str_(e.args[2])}",
+    Head.assert_: lambda e, i: f"{_s_(i)}assert {str_(e.args[0])}, {str_(e.args[1])}".rstrip(", "),  # noqa
+    Head.comment: lambda e, i: f"{_s_(i)}# {e.args[0]}",
+    Head.unop: lambda e, i: f"{_s_(i)}({str_(e.args[0])}{str_(e.args[1])})",
+    Head.binop: lambda e, i: f"{_s_(i)}({str_(e.args[1])} {str_(e.args[0])} {str_(e.args[2])})",  # noqa
+    Head.aug: lambda e, i: f"{_s_(i)}{str_(e.args[1])} {str_(e.args[0])}= {str_(e.args[2])}",  # noqa
     Head.block: lambda e, i: sjoin("\n", e.args, i),
-    Head.function: lambda e, i: " " * i
-    + f"def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",
-    Head.return_: lambda e, i: " " * i + f"return {sjoin(', ', e.args)}",
-    Head.raise_: lambda e, i: " " * i + f"raise {str_(e.args[0])}",
-    Head.if_: lambda e, i: " " * i
-    + f"if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n"
-    + " " * i
-    + f"else:\n{str_(e.args[2], i+4)}",
-    Head.elif_: lambda e, i: " " * i
-    + f"if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n"
-    + " " * i
-    + f"else:\n{str_(e.args[2], i+4)}",
-    Head.for_: lambda e, i: " " * i
-    + f"for {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",
-    Head.while_: lambda e, i: " " * i
-    + f"while {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",
+    Head.function: lambda e, i: f"{_s_(i)}def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
+    Head.return_: lambda e, i: f"{_s_(i)}return {sjoin(', ', e.args)}",
+    Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
+    Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
+    Head.elif_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
+    Head.for_: lambda e, i: f"{_s_(i)}for {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
+    Head.while_: lambda e, i: f"{_s_(i)}while {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.annotate: lambda e, i: f"{str_(e.args[0], i)}: {str_(e.args[1])}",
 }
 
@@ -142,7 +135,7 @@ class Expr:
                 raise type(e)(f"Indexing encounted Symbol at position {i}.")
         return now
 
-    def eval(self, _globals: dict[Symbol | str, Any] = {}, _locals: dict = {}):
+    def eval(self, _globals: Mapping[Symbol | str, Any] = {}, _locals: dict = {}):
         """
         Evaluate or execute macro as an Python script.
 
@@ -186,7 +179,7 @@ class Expr:
         obj: Any,
         func: Callable,
         args: tuple[Any, ...] = None,
-        kwargs: dict[str | Symbol, Any] = None,
+        kwargs: Mapping[str | Symbol, Any] = None,
     ) -> Expr:
         """
         Parse ``obj.func(*args, **kwargs)``.
@@ -200,7 +193,7 @@ class Expr:
         obj: Any,
         init_cls: type = None,
         args: tuple[Any, ...] = None,
-        kwargs: dict[str | Symbol, Any] = None,
+        kwargs: Mapping[str | Symbol, Any] = None,
     ) -> Expr:
         """
         Parse ``obj = init_cls(*args, **kwargs)``.
@@ -215,7 +208,7 @@ class Expr:
         cls,
         func: Callable | Symbol | Expr,
         args: tuple[Any, ...] = None,
-        kwargs: dict[str | Symbol, Any] = None,
+        kwargs: Mapping[str | Symbol, Any] = None,
     ) -> Expr:
         """
         Parse ``func(*args, **kwargs)``.
@@ -249,7 +242,7 @@ class Expr:
 
     @classmethod
     def convert_args(
-        cls, args: tuple[Any, ...], kwargs: dict[str | Symbol, Any]
+        cls, args: tuple[Any, ...], kwargs: Mapping[str | Symbol, Any]
     ) -> list:
         inputs = []
         for a in args:
@@ -313,7 +306,9 @@ class Expr:
             yield self
 
     @overload
-    def format(self, mapping: dict[Any, Symbol | Expr], inplace: bool = False) -> Expr:
+    def format(self, 
+               mapping: Mapping[Any, Symbol | Expr], 
+               inplace: bool = False) -> Expr:
         ...
 
     @overload
@@ -347,14 +342,14 @@ class Expr:
         """
         if isinstance(mapping, dict):
             mapping = mapping.items()
-        mapping = check_format_mapping(mapping)
+        mapping = _check_format_mapping(mapping)
 
         if not inplace:
             self = self.copy()
 
         return self._unsafe_format(mapping)
 
-    def _unsafe_format(self, mapping: dict[Symbol, Symbol | Expr]) -> Expr:
+    def _unsafe_format(self, mapping: Mapping[Symbol, Symbol | Expr]) -> Expr:
         for i, arg in enumerate(self.args):
             if isinstance(arg, Expr):
                 arg._unsafe_format(mapping)
@@ -368,7 +363,7 @@ class Expr:
         return self
 
 
-def check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Symbol | Expr]:
+def _check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Symbol | Expr]:
     _dict: dict[Symbol, Symbol | Expr] = {}
     for comp in mapping_list:
         if len(comp) != 2:
@@ -392,6 +387,7 @@ def check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Symbol | Expr]:
 
 
 def make_symbol_str(obj: Any):
+    """Make a string for symbol."""
     # hexadecimals are easier to distinguish
     _id = id(obj)
     if obj is not None:

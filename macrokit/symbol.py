@@ -104,6 +104,7 @@ class Symbol:
         return self
 
     def as_parameter(self, default=inspect.Parameter.empty) -> inspect.Parameter:
+        """Convert symbol as an ``inspect.Parameter`` object."""
         return inspect.Parameter(
             self._name, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default
         )
@@ -172,6 +173,8 @@ class Symbol:
                 raise TypeError("")
 
             def _register_type(type_: type):
+                if not isinstance(type_, type):
+                    raise TypeError(f"Type expected, got {type(type_)}")
                 cls._type_map[type_] = type_or_function
                 return type_
 

@@ -22,7 +22,7 @@ from typing_extensions import TypedDict
 
 from .ast import parse
 from .expression import EXEC, Expr, Head, symbol
-from .symbol import Symbol
+from ._symbol import Symbol
 
 _NON_RECORDABLE = (
     "__new__",

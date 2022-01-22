@@ -3,7 +3,7 @@ import os
 import sys
 from distutils.command import build_ext
 
-
+# Modified from https://github.com/tlambert03/psygnal
 if os.name == "nt":
 
     # fix LINK : error LNK2001: unresolved external symbol PyInit___init__
@@ -34,8 +34,10 @@ if os.name == "nt":
 
 
 with open("macrokit/__init__.py", encoding="utf-8") as f:
-    line = next(iter(f))
-    VERSION = line.strip().split()[-1][1:-1]
+    for line in f:
+        if line.startswith("__version__"):
+            VERSION = line.strip().split()[-1][1:-1]
+            break
 
 with open("README.md") as f:
     readme = f.read()
@@ -59,7 +61,13 @@ if (
         # Only the last optimization flag will have effect
         os.environ["CFLAGS"] = "-O3 " + os.environ.get("CFLAGS", "")
         ext_modules = cythonize(
-            ["macrokit/symbol.py", "macrokit/expression.py", "macrokit/_validator.py"],
+            module_list=[
+                "macrokit/_symbol.py",
+                "macrokit/_validator.py",
+                "macrokit/ast.py",
+                "macrokit/expression.py",
+                "macrokit/head.py",
+            ],
             nthreads=int(os.getenv("CYTHON_NTHREADS", 0)),
             language_level=3,
             compiler_directives=compiler_directives,
@@ -78,7 +86,7 @@ setup(
     download_url="https://github.com/hanjinliu/macro-kit",
     install_requires=["typing_extensions"],
     packages=find_packages(exclude=["tests", "examples"]),
-    package_data={"macro-kit": ["py.typed"]},
+    package_data={"macrokit": ["py.typed"]},
     ext_modules=ext_modules,
     python_requires=">=3.7",
     classifiers=[

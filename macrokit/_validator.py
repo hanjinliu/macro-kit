@@ -1,12 +1,12 @@
-from typing import Callable, Any, Hashable, TypeVar, Generic, Iterable, Union
-from .symbol import Symbol
+from typing import Callable, Hashable, TypeVar, Iterable, Union
+from ._symbol import Symbol
 from .head import Head
 
 _T = TypeVar("_T", bound=Hashable)
 _A = TypeVar("_A")
 
 
-class Validator(Generic[_T, _A]):
+class Validator:
     """A validator class that will be used for Expr argument validation."""
 
     def __init__(self):
@@ -15,7 +15,7 @@ class Validator(Generic[_T, _A]):
     def register(self, value: _T):
         """Register value for validation."""
 
-        def wrapper(func: Callable[[_A], _A]):
+        def wrapper(func):
             self._map[value] = func
             return func
 
@@ -39,7 +39,7 @@ class ValidationError(ValueError):
     """Raised when validation failed."""
 
 
-validator: Validator[Head, list[Any]] = Validator()
+validator = Validator()
 
 
 @validator.register(Head.empty)

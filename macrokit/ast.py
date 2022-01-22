@@ -1,13 +1,10 @@
-from __future__ import annotations
-
 import ast
 import inspect
 import sys
-from functools import singledispatch
-from typing import Callable
+from typing import Callable, Dict, Union, List, get_type_hints
 
 from .expression import Expr, Head, symbol
-from .symbol import Symbol
+from ._symbol import Symbol
 
 NoneType = type(None)
 
@@ -45,12 +42,12 @@ AST_UNOP_MAP = {
 }
 
 
-def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
+def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Symbol]:
     """Convert Python code string into Expr/Symbol objects."""
     if callable(source):
         source = inspect.getsource(source)
     body = ast.parse(source).body
-    ast_object: list[ast.stmt] | ast.stmt
+    ast_object: Union[List[ast.stmt], ast.stmt]
     if len(body) == 1:
         ast_object = body[0]
     else:
@@ -62,8 +59,28 @@ def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
     return out
 
 
+def singledispatch(default_func: Callable):
+    """Simple version of functools.singledispatch."""
+    _registry: Dict[type, Callable] = {}
+
+    def register(func: Callable):
+        cls = next(iter(get_type_hints(func).values()))
+        _registry[cls] = func
+        return func
+
+    def wrapper(*args, **kwargs):
+        try:
+            f = _registry[args[0].__class__]
+        except KeyError:
+            f = default_func
+        return f(*args, **kwargs)
+
+    wrapper.register = register  # type: ignore
+    return wrapper
+
+
 @singledispatch
-def from_ast(ast_object: ast.AST | list | NoneType):
+def from_ast(ast_object: Union[ast.AST, list, NoneType]):
     """Convert AST object to macro-kit object."""
     raise NotImplementedError(f"AST type {type(ast_object)} cannot be converted now.")
 
@@ -340,14 +357,14 @@ def _return(ast_object: ast.Return):
     return Expr(head, args)
 
 
-def _nest_binop(op, values: list[ast.expr]):
+def _nest_binop(op, values: List[ast.expr]):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]
     else:
         return [op, from_ast(values[0]), Expr(Head.binop, _nest_binop(op, values[1:]))]
 
 
-def _nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
+def _nest_compare(ops: List[ast.cmpop], values: List[ast.expr]):
     if len(ops) == 1:
         return [AST_BINOP_MAP[type(ops[0])], from_ast(values[0]), from_ast(values[1])]
     else:

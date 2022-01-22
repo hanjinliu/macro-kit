@@ -1,8 +1,10 @@
 """macro-kit is a package for macro recording and metaprogramming in Python."""
 
-__version__ = "0.3.7.dev0"
+__version__ = "0.3.7.dev1"
+__author__ = "Hanjin Liu"
+__email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 
-from .symbol import Symbol, register_type
+from ._symbol import Symbol, register_type
 from .expression import Expr, Head, symbol
 from .macro import Macro, MacroFlags
 from .mock import Mock

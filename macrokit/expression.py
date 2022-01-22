@@ -1,11 +1,11 @@
 from copy import deepcopy
 from numbers import Number
 from types import ModuleType
-from typing import Any, Callable, Iterable, Iterator, overload, Union
+from typing import Any, Callable, Iterable, Iterator, overload, Union, List, Tuple, Dict
 
 from ._validator import validator
 from .head import EXEC, Head
-from .symbol import Symbol
+from ._symbol import Symbol
 
 
 def str_(expr: Any, indent: int = 0):
@@ -37,7 +37,7 @@ def _comma(a, b):
     return f"{a}, {b}".rstrip(", ")
 
 
-_STR_MAP: dict[Head, Callable[["Expr", int], str]] = {
+_STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
     Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{str_(e.args[1])}]",
@@ -80,7 +80,7 @@ class Expr:
         return self._head
 
     @property
-    def args(self) -> list[Union["Expr", Symbol]]:
+    def args(self) -> List[Union["Expr", Symbol]]:
         """Return args of Expr."""
         return self._args
 
@@ -162,14 +162,14 @@ class Expr:
             Updated variable namespace. Will be a mapping from symbols to values.
 
         """
-        _glb: dict[str, Any] = {
+        _glb: Dict[str, Any] = {
             (sym.name if isinstance(sym, Symbol) else sym): v
             for sym, v in _globals.items()
         }
 
         # use registered modules
         if Symbol._module_symbols:
-            format_dict: dict[Symbol, Union[Symbol, Expr]] = {}
+            format_dict: Dict[Symbol, Union[Symbol, Expr]] = {}
             for id_, sym in Symbol._module_symbols.items():
                 mod = Symbol._module_map[sym.name]
                 vstr = f"var{hex(id_)}"
@@ -189,7 +189,7 @@ class Expr:
         cls,
         obj: Any,
         func: Callable,
-        args: tuple[Any, ...] = None,
+        args: Tuple[Any, ...] = None,
         kwargs: dict = None,
     ) -> "Expr":
         """Parse ``obj.func(*args, **kwargs)``."""
@@ -201,7 +201,7 @@ class Expr:
         cls,
         obj: Any,
         init_cls: type = None,
-        args: tuple[Any, ...] = None,
+        args: Tuple[Any, ...] = None,
         kwargs: dict = None,
     ) -> "Expr":
         """Parse ``obj = init_cls(*args, **kwargs)``."""
@@ -214,7 +214,7 @@ class Expr:
     def parse_call(
         cls,
         func: Union[Callable, Symbol, "Expr"],
-        args: tuple[Any, ...] = None,
+        args: Tuple[Any, ...] = None,
         kwargs: dict = None,
     ) -> "Expr":
         """Parse ``func(*args, **kwargs)``."""
@@ -242,7 +242,7 @@ class Expr:
         return cls(Head.assign, [target, symbol(value)])
 
     @classmethod
-    def _convert_args(cls, args: tuple[Any, ...], kwargs: dict) -> list:
+    def _convert_args(cls, args: Tuple[Any, ...], kwargs: dict) -> list:
         inputs = []
         for a in args:
             inputs.append(a)
@@ -304,7 +304,7 @@ class Expr:
     @overload
     def format(
         self,
-        mapping: Iterable[tuple[Any, Union[Symbol, "Expr"]]],
+        mapping: Iterable[Tuple[Any, Union[Symbol, "Expr"]]],
         inplace: bool = False,
     ) -> "Expr":
         ...
@@ -355,8 +355,8 @@ class Expr:
         return self
 
 
-def _check_format_mapping(mapping_list: Iterable) -> dict[Symbol, Union[Symbol, Expr]]:
-    _dict: dict[Symbol, Union[Symbol, Expr]] = {}
+def _check_format_mapping(mapping_list: Iterable) -> Dict[Symbol, Union[Symbol, Expr]]:
+    _dict: Dict[Symbol, Union[Symbol, Expr]] = {}
     for comp in mapping_list:
         if len(comp) != 2:
             raise ValueError("Wrong style of mapping list.")

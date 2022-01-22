@@ -5,7 +5,7 @@ from typing import Any
 from .expression import Expr
 from .head import Head
 from .macro import BINOP_MAP, UNOP_MAP
-from .symbol import Symbol
+from ._symbol import Symbol
 
 
 def _mock_to_expr(mock: Mock):

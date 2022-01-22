@@ -1,18 +1,8 @@
 import inspect
 from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
-from typing import Any, Callable, TypeVar, overload, Optional
-
-from typing_extensions import TypedDict
+from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
 
 T = TypeVar("T")
-
-
-class SymbolDict(TypedDict):
-    """Dictionary representin a Symbol object."""
-
-    name: str
-    object_id: int
-    constant: bool
 
 
 class Symbol:
@@ -49,7 +39,7 @@ class Symbol:
         self.object_id = object_id or id(seq)
         self.constant = True
 
-    def asdict(self) -> SymbolDict:
+    def asdict(self) -> Dict[str, Any]:
         """Convert Symbol object into a dict."""
         return {
             "name": self.name,
@@ -123,20 +113,20 @@ class Symbol:
     @overload
     @classmethod
     def register_type(
-        cls, type: type[T], function: Optional[Callable[[T], Any]]
+        cls, type: Type[T], function: Optional[Callable[[T], Any]]
     ) -> None:
         ...
 
     @overload
     @classmethod
     def register_type(
-        cls, type: type[T]
+        cls, type: Type[T]
     ) -> Callable[[Callable[[T], Any]], Callable[[T], Any]]:
         ...
 
     @overload
     @classmethod
-    def register_type(cls, func: Callable[[T], Any]) -> Callable[[type[T]], type[T]]:
+    def register_type(cls, func: Callable[[T], Any]) -> Callable[[Type[T]], Type[T]]:
         ...
 
     @classmethod
@@ -185,7 +175,7 @@ class Symbol:
                     "'register_type' must take type or function as arguments."
                 )
 
-            def _register_type(type_: type[T]) -> type[T]:
+            def _register_type(type_: Type[T]) -> Type[T]:
                 if not isinstance(type_, type):
                     raise TypeError(f"Type expected, got {type(type_)}")
                 cls._type_map[type_] = type_or_function
@@ -195,7 +185,6 @@ class Symbol:
 
 
 register_type = Symbol.register_type
-
 try:
     import cython
 except ImportError:  # pragma: no cover

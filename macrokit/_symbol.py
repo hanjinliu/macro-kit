@@ -1,6 +1,6 @@
 import inspect
 from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
-from typing import Any, Callable, Dict, Type, TypeVar, overload, Optional
+from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
 
 T = TypeVar("T")
 
@@ -9,7 +9,7 @@ class Symbol:
     """A class that represents Python symbol in the context of metaprogramming."""
 
     # Map of how to convert object into a symbol.
-    _type_map: dict[type, Callable] = {
+    _type_map: Dict[type, Callable] = {
         type: lambda e: e.__name__,
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,
@@ -25,14 +25,14 @@ class Symbol:
     }
 
     # Map to speed up type check
-    _subclass_map: dict[type, type] = {}
+    _subclass_map: Dict[type, type] = {}
 
     # ID of global variables
-    _variables: set[int] = set()
+    _variables: Set[int] = set()
 
     # Module symbols
-    _module_symbols: dict[int, "Symbol"] = {}
-    _module_map: dict[str, ModuleType] = {}
+    _module_symbols: Dict[int, "Symbol"] = {}
+    _module_map: Dict[str, ModuleType] = {}
 
     def __init__(self, seq: Any, object_id: int = None):
         self._name = str(seq)
@@ -188,9 +188,9 @@ register_type = Symbol.register_type
 try:
     import cython
 except ImportError:  # pragma: no cover
-    _symbol_compiled: bool = False
+    COMPILED: bool = False
 else:  # pragma: no cover
     try:
-        _symbol_compiled = cython.compiled
+        COMPILED = cython.compiled
     except AttributeError:
-        _symbol_compiled = False
+        COMPILED = False

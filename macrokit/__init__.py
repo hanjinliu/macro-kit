@@ -1,3 +1,5 @@
+"""macro-kit is a package for macro recording and metaprogramming in Python."""
+
 __version__ = "0.3.7.dev0"
 
 from .symbol import Symbol, register_type
@@ -8,10 +10,22 @@ from .ast import parse
 from functools import wraps
 
 
-__all__ = ["Symbol", "Head", "Expr", "Macro", "Mock",
-           "symbol", "register_type", "parse",
-           "blocked", "record", "property", "dump", "get_macro", "set_flags"
-           ]
+__all__ = [
+    "Symbol",
+    "Head",
+    "Expr",
+    "Macro",
+    "Mock",
+    "symbol",
+    "register_type",
+    "parse",
+    "blocked",
+    "record",
+    "property",
+    "dump",
+    "get_macro",
+    "set_flags",
+]
 
 # global macro instance and its functions
 
@@ -19,26 +33,27 @@ _MACRO = Macro()
 
 
 @wraps(_MACRO.blocked)
-def blocked():
+def blocked():  # noqa: D103
     return _MACRO.blocked()
 
 
 @wraps(_MACRO.record)
-def record(obj=None, *, returned_callback=None):
+def record(obj=None, *, returned_callback=None):  # noqa: D103
     return _MACRO.record(obj, returned_callback=returned_callback)
 
 
 @wraps(_MACRO.property)
-def property(prop):
+def property(prop):  # noqa: D103
     return _MACRO.property(prop)
 
 
 @wraps(_MACRO.dump)
-def dump() -> str:
+def dump() -> str:  # noqa: D103
     return _MACRO.dump()
 
 
 def get_macro(mapping=None) -> str:
+    """Get macro as a string."""
     if mapping:
         macro = _MACRO.format(mapping)
     else:
@@ -46,11 +61,10 @@ def get_macro(mapping=None) -> str:
     return str(macro)
 
 
-def set_flags(Get: bool = True, Set: bool = True, Delete: bool = True,
-              Return: bool = True):
-    """
-    Set macro flags.
-    """
+def set_flags(
+    Get: bool = True, Set: bool = True, Delete: bool = True, Return: bool = True
+):
+    """Set macro flags."""
     _MACRO._flags = MacroFlags(Get, Set, Delete, Return)
     return None
 

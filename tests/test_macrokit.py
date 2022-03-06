@@ -1,6 +1,21 @@
 from macrokit import Expr, Macro, Symbol, parse, register_type, symbol
 
 
+def test_symbols():
+    assert str(symbol(1)) == "1"
+    assert str(symbol("")) == "''"
+    assert str(symbol(None)) == "None"
+    assert str(symbol(())) == "()"
+    assert str(symbol((1,))) == "(1,)"
+    assert str(symbol([(), (1,), set()])) == "[(), (1,), set()]"
+    assert str(symbol(True)) == "True"
+    assert str(symbol(1 - 3j)) == "(1-3j)"
+    assert str(symbol(bytes("a", encoding="utf-8"))) == "b'a'"
+    assert (
+        str(symbol({"a": [1, 2], "b": [0.1, 0.2]})) == "{'a': [1, 2], 'b': [0.1, 0.2]}"
+    )
+
+
 def test_function():
     macro = Macro()
 

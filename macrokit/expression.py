@@ -422,7 +422,11 @@ def symbol(obj: Any, constant: bool = True) -> Union[Symbol, Expr]:
         parent_type = Symbol._subclass_map[obj_type]
         seq = Symbol._type_map[parent_type](obj)
     elif isinstance(obj, tuple):
-        seq = "(" + ", ".join(str(symbol(a)) for a in obj) + ")"
+        if len(obj) == 1:
+            # length 1 tuple have to be written as (a,) instead of (a).
+            seq = f"({symbol(obj[0])},)"
+        else:
+            seq = "(" + ", ".join(str(symbol(a)) for a in obj) + ")"
         if obj_type is not tuple:
             seq = obj_type.__name__ + seq
     elif isinstance(obj, list):
@@ -434,9 +438,15 @@ def symbol(obj: Any, constant: bool = True) -> Union[Symbol, Expr]:
         if obj_type is not dict:
             seq = f"{obj_type.__name__}({seq})"
     elif isinstance(obj, set):
-        seq = "{" + ", ".join(str(symbol(a)) for a in obj) + "}"
-        if obj_type is not set:
-            seq = f"{obj_type.__name__}({seq})"
+        if len(obj) == 0:
+            if obj_type is set:
+                seq = "set()"
+            else:
+                seq = f"{obj_type.__name__}()"
+        else:
+            seq = "{" + ", ".join(str(symbol(a)) for a in obj) + "}"
+            if obj_type is not set:
+                seq = f"{obj_type.__name__}({seq})"
     elif isinstance(obj, Number):  # int, float, bool, ...
         seq = obj
     elif isinstance(obj, ModuleType):

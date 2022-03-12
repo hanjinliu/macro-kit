@@ -4,7 +4,7 @@ __version__ = "0.3.8"
 __author__ = "Hanjin Liu"
 __email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 
-from ._symbol import Symbol, register_type
+from ._symbol import Symbol, register_type, COMPILED
 from .expression import Expr, Head, symbol
 from .macro import Macro, MacroFlags
 from .mock import Mock

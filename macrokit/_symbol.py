@@ -17,6 +17,7 @@ class Symbol:
         type(None): lambda e: "None",
         str: repr,
         bytes: repr,
+        bytearray: repr,
         slice: lambda e: f"slice({e.start}, {e.stop}, {e.step})",
         int: str,
         float: str,

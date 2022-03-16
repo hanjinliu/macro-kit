@@ -179,7 +179,14 @@ class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
 
     def __getitem__(self, key):
         """Get child expressions."""
-        return self._args[key]
+        if isinstance(key, int):
+            return self._args[key]
+        elif isinstance(key, slice):
+            return type(self)(self._args[key], flags=self._flags)
+        raise TypeError(
+            f"{type(self).__name__} indices must intergers or slices, "
+            f"not {type(key).__name__}"
+        )
 
     @overload
     def __setitem__(self, key: int, value: Symbol | Expr) -> None:  # noqa

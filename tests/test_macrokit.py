@@ -362,4 +362,15 @@ def test_eq():
     assert parse("a = 1") == parse("a = 1")
     assert parse("a = 1") != parse("b.a = 1")
     assert parse("func(3)") == parse("func(3)")
-    # assert parse("t['xy'] = func(0, 2)") == parse("t['xy'] = func(0, 2)") BUG: False!!
+    # assert parse("a = 'a'") == parse("a = 'a'")  # this is False, but should it be?
+    # assert parse("t['xy'] = func(0, 2)") == parse("t['xy'] = func(0, 2)")
+
+
+def test_sliceing():
+    macro = Macro()
+    macro.append("a = 1")
+    macro.append("b = 1")
+    macro.append("c = 1")
+    assert isinstance(macro[0], Expr)
+    assert isinstance(macro[1:], Macro)
+    assert macro.flags == macro[1:].flags

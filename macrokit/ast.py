@@ -7,6 +7,7 @@ from .expression import Expr, Head, symbol
 from ._symbol import Symbol
 
 NoneType = type(None)
+LAMBDA = Symbol._reserved("<lambda>")
 
 AST_BINOP_MAP = {
     ast.Add: Symbol._reserved("+"),
@@ -254,6 +255,25 @@ def _if(ast_object: ast.If):
         from_ast(ast_object.orelse),
     ]
     return Expr(head, args)
+
+
+@from_ast.register
+def _lambda(ast_object: ast.Lambda):
+    head = Head.lambda_
+    fargs = ast_object.args
+    nargs = len(fargs.args) - len(fargs.defaults)
+    args = [from_ast(k) for k in fargs.args[:nargs]]
+    kwargs = [
+        Expr(Head.kw, [from_ast(k), from_ast(v)])
+        for k, v in zip(fargs.args[nargs:], fargs.defaults)
+    ]
+    return Expr(
+        head,
+        [
+            Expr(Head.call, [LAMBDA] + args + kwargs),  # type: ignore
+            from_ast(ast_object.body),
+        ],
+    )
 
 
 @from_ast.register

@@ -16,6 +16,13 @@ def str_(expr: Any, indent: int = 0):
         return " " * indent + str(expr)
 
 
+def str_lmd(expr: Any, indent: int = 0):
+    """Convert str into a proper lambda function definition."""
+    s = str(expr)
+    call = s.lstrip("<lambda>(").rstrip(")")
+    return " " * indent + f"lambda {call}"
+
+
 def rm_par(s: str):
     """Remove parenthesis."""
     if s[0] == "(" and s[-1] == ")":
@@ -52,6 +59,7 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.aug: lambda e, i: f"{_s_(i)}{str_(e.args[1])} {str_(e.args[0])}= {str_(e.args[2])}",  # noqa
     Head.block: lambda e, i: sjoin("\n", e.args, i),
     Head.function: lambda e, i: f"{_s_(i)}def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
+    Head.lambda_: lambda e, i: f"{str_lmd(e.args[0], i)}: {str_(e.args[1])}",  # noqa
     Head.return_: lambda e, i: f"{_s_(i)}return {sjoin(', ', e.args)}",
     Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
     Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa

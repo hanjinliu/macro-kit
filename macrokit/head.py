@@ -2,6 +2,8 @@ from enum import Enum
 
 
 class Head(Enum):
+    """Head of Expr."""
+
     empty = "empty"
     getattr = "getattr"
     getitem = "getitem"
@@ -16,6 +18,7 @@ class Head(Enum):
     aug = "aug"
     block = "block"
     function = "function"
+    lambda_ = "lambda"
     return_ = "return"
     raise_ = "raise"
     if_ = "if"

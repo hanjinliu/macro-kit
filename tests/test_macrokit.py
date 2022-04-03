@@ -14,6 +14,10 @@ def test_symbols():
     assert (
         str(symbol({"a": [1, 2], "b": [0.1, 0.2]})) == "{'a': [1, 2], 'b': [0.1, 0.2]}"
     )
+    assert str(symbol(set())) == "set()"
+    assert str(symbol({1, 2, 3})) == "{1, 2, 3}"
+    assert str(symbol(frozenset())) == "frozenset({})"
+    assert str(symbol(frozenset([1, 2]))) == "frozenset({1, 2})"
 
 
 def test_function():

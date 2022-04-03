@@ -455,6 +455,12 @@ def symbol(obj: Any, constant: bool = True) -> Union[Symbol, Expr]:
             seq = "{" + ", ".join(str(symbol(a)) for a in obj) + "}"
             if obj_type is not set:
                 seq = f"{obj_type.__name__}({seq})"
+    elif isinstance(obj, frozenset):
+        seq = ", ".join(str(symbol(a)) for a in obj)
+        if obj_type is frozenset:
+            seq = f"frozenset({{{seq}}})"
+        else:
+            seq = f"{obj_type.__name__}({{{seq}}})"
     elif isinstance(obj, Number):  # int, float, bool, ...
         seq = obj
     elif isinstance(obj, ModuleType):

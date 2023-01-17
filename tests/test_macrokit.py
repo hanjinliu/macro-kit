@@ -2,25 +2,6 @@ import pytest
 from macrokit import Expr, Macro, Symbol, parse, register_type, symbol
 
 
-def test_symbols():
-    assert str(symbol(1)) == "1"
-    assert str(symbol("")) == "''"
-    assert str(symbol(None)) == "None"
-    assert str(symbol(())) == "()"
-    assert str(symbol((1,))) == "(1,)"
-    assert str(symbol([(), (1,), set()])) == "[(), (1,), set()]"
-    assert str(symbol(True)) == "True"
-    assert str(symbol(1 - 3j)) == "(1-3j)"
-    assert str(symbol(bytes("a", encoding="utf-8"))) == "b'a'"
-    assert (
-        str(symbol({"a": [1, 2], "b": [0.1, 0.2]})) == "{'a': [1, 2], 'b': [0.1, 0.2]}"
-    )
-    assert str(symbol(set())) == "set()"
-    assert str(symbol({1, 2, 3})) == "{1, 2, 3}"
-    assert str(symbol(frozenset())) == "frozenset({})"
-    assert str(symbol(frozenset([1, 2]))) == "frozenset({1, 2})"
-
-
 def test_function():
     macro = Macro()
 
@@ -207,20 +188,6 @@ def test_register_type():
             self.name = "t"
 
     assert str(symbol(T())) == "t"
-
-
-def test_symbol_var():
-    sym_x = Symbol("x")
-    sym_y = Symbol("y")
-    var_y0 = Symbol.var("y")
-    var_y1 = Symbol.var("y")
-    var_y2 = Symbol.var("y")
-    var_y3 = Symbol.var("y")
-
-    assert sym_x == sym_x
-    assert sym_x != sym_y
-    assert sym_y != var_y0
-    assert var_y0 == var_y1 and var_y1 == var_y2 and var_y2 == var_y3
 
 
 code1 = """

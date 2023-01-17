@@ -60,6 +60,10 @@ class Symbol:
             raise TypeError(f"Cannot set non-string to name: {newname!r}.")
         self._name = newname
 
+    def eval(self, ns={}) -> Any:
+        """Evaluate symbol."""
+        return eval(self.name, ns, {})
+
     def __repr__(self) -> str:
         """Return a Julia-like repr."""
         if self.constant:
@@ -136,27 +140,19 @@ class Symbol:
         """
         Define a dispatcher for macro recording.
 
-        .. code-block:: python
-
-            register_type(np.ndarray,
-                          lambda arr: str(arr.tolist())
-                          )
+        >>> register_type(np.ndarray, lambda arr: str(arr.tolist()))
 
         or
 
-        .. code-block:: python
-
-            @register_type(np.ndarray)
-            def _(arr):
-                return str(arr.tolist())
+        >>> @register_type(np.ndarray)
+        >>> def _(arr):
+        ...     return str(arr.tolist())
 
         or if you defined a new type
 
-        .. code-block:: python
-
-            @register_type(lambda t: t.name)
-            class T:
-                ...
+        >>> @register_type(lambda t: t.name)
+        >>> class T:
+        ...     ...
 
         """
         if isinstance(type_or_function, type):

@@ -91,7 +91,7 @@ class Expr:
         return self._head
 
     @property
-    def args(self) -> List[Union["Expr", Symbol]]:
+    def args(self) -> List[_Expr]:
         """Return args of Expr."""
         return self._args
 
@@ -138,7 +138,7 @@ class Expr:
         # Always copy object deeply.
         return deepcopy(self)
 
-    def at(self, *indices: int) -> Union[Symbol, "Expr"]:
+    def at(self, *indices: int) -> _Expr:
         """
         Easier way of tandem get-item.
 
@@ -146,7 +146,7 @@ class Expr:
         descriptions during this function call. ``expr.at(i, j, k)`` is equivalent
         to ``expr.args[i].args[j].args[k]``.
         """
-        now: Union[Symbol, Expr] = self
+        now: _Expr = self
         for i in indices:
             if isinstance(now, Symbol):
                 raise TypeError(f"Indexing encounted Symbol at position {i}.")
@@ -180,7 +180,7 @@ class Expr:
 
         # use registered modules
         if Symbol._module_symbols:
-            format_dict: Dict[Symbol, Union[Symbol, Expr]] = {}
+            format_dict: Dict[Symbol, _Expr] = {}
             for id_, sym in Symbol._module_symbols.items():
                 mod = Symbol._module_map[sym.name]
                 vstr = f"var{hex(id_)}"
@@ -224,7 +224,7 @@ class Expr:
     @classmethod
     def parse_call(
         cls,
-        func: Union[Callable, Symbol, "Expr"],
+        func: Union[Callable, _Expr],
         args: Tuple[Any, ...] = None,
         kwargs: dict = None,
     ) -> "Expr":
@@ -240,8 +240,8 @@ class Expr:
         inputs = [func] + cls._convert_args(args, kwargs)
         return cls(head=Head.call, args=inputs)
 
-    def unparse_call(self) -> Tuple[_Expr, Tuple[_Expr, ...], Dict[str, _Expr]]:
-        """Unparse ``func(*args, **kwargs)`` to (func, args, kwargs)."""
+    def split_call(self) -> Tuple[_Expr, Tuple[_Expr, ...], Dict[str, _Expr]]:
+        """Split ``func(*args, **kwargs)`` to (func, args, kwargs)."""
         if self.head is not Head.call:
             raise ValueError(f"Expected {Head.call}, got {self.head}.")
         args = []
@@ -256,11 +256,11 @@ class Expr:
                 args.append(arg)
         return self.args[0], tuple(args), kwargs
 
-    def unparse_method(
+    def split_method(
         self,
     ) -> Tuple[_Expr, Symbol, Tuple[_Expr, ...], Dict[str, _Expr]]:
-        """Unparse ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
-        fn, args, kwargs = self.unparse_call()
+        """Split ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
+        fn, args, kwargs = self.split_call()
         if not isinstance(fn, Expr) or fn.head is not Head.getattr:
             raise ValueError("Not a method call.")
         obj, attr = fn.args
@@ -274,7 +274,7 @@ class Expr:
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
-    def unparse_setitem(self) -> Tuple[_Expr, Symbol, _Expr]:
+    def split_setitem(self) -> Tuple[_Expr, Symbol, _Expr]:
         """Return ``obj, key, value`` if ``self`` is ``obj[key] = value``."""
         if self.head is not Head.assign:
             raise ValueError("Not a setitem expression.")
@@ -292,7 +292,7 @@ class Expr:
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.del_, [target])
 
-    def unparse_delitem(self) -> Tuple[_Expr, Symbol]:
+    def split_delitem(self) -> Tuple[_Expr, Symbol]:
         """Return ``obj, key`` if ``self`` is ``del obj[key]``."""
         if self.head is not Head.del_:
             raise ValueError("Not a delitem expression.")
@@ -310,7 +310,7 @@ class Expr:
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
-    def unparse_setattr(self) -> Tuple[_Expr, Symbol, _Expr]:
+    def split_setattr(self) -> Tuple[_Expr, Symbol, _Expr]:
         """Return ``obj, key, value`` if ``self`` is ``obj.key = value``."""
         if self.head is not Head.assign:
             raise ValueError("Not a setattr expression.")
@@ -328,7 +328,7 @@ class Expr:
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
         return cls(Head.del_, [target])
 
-    def unparse_delattr(self) -> Tuple[_Expr, Symbol]:
+    def split_delattr(self) -> Tuple[_Expr, Symbol]:
         """Return ``obj, key`` if ``self`` is ``del obj.key``."""
         if self.head is not Head.del_:
             raise ValueError("Not a delattr expression.")
@@ -438,7 +438,7 @@ class Expr:
     @overload
     def format(
         self,
-        mapping: Iterable[Tuple[Any, Union[Symbol, "Expr"]]],
+        mapping: Iterable[Tuple[Any, _Expr]],
         inplace: bool = False,
     ) -> "Expr":
         ...
@@ -489,8 +489,8 @@ class Expr:
         return self
 
 
-def _check_format_mapping(mapping_list: Iterable) -> Dict[Symbol, Union[Symbol, Expr]]:
-    _dict: Dict[Symbol, Union[Symbol, Expr]] = {}
+def _check_format_mapping(mapping_list: Iterable) -> Dict[Symbol, _Expr]:
+    _dict: Dict[Symbol, _Expr] = {}
     for comp in mapping_list:
         if len(comp) != 2:
             raise ValueError("Wrong style of mapping list.")
@@ -521,7 +521,7 @@ def make_symbol_str(obj: Any):
     return f"var{hex(_id)}"
 
 
-def symbol(obj: Any, constant: bool = True) -> Union[Symbol, Expr]:
+def symbol(obj: Any, constant: bool = True) -> _Expr:
     """
     Make a proper Symbol or Expr instance from any objects.
 

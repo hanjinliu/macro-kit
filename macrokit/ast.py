@@ -3,8 +3,8 @@ import inspect
 import sys
 from typing import Callable, Dict, Union, List, get_type_hints
 
-from .expression import Expr, Head, symbol
-from ._symbol import Symbol
+from macrokit.expression import Expr, Head, symbol
+from macrokit._symbol import Symbol
 
 NoneType = type(None)
 LAMBDA = Symbol._reserved("<lambda>")

@@ -4,9 +4,9 @@ from types import ModuleType
 from typing import Any, Callable, Iterable, Iterator, overload, Union, List, Tuple, Dict
 import inspect
 
-from ._validator import validator
-from .head import EXEC, Head
-from ._symbol import Symbol
+from macrokit.head import EXEC, Head
+from macrokit._validator import validator
+from macrokit._symbol import Symbol
 
 
 def str_(expr: Any, indent: int = 0):
@@ -285,14 +285,21 @@ class Expr:
         """
         if self.head is not Head.call:
             raise ValueError(f"Expected {Head.call}, got {self.head}.")
+        # search for the index where keyword argument starts
         arguments = self.args[1:]
-        for i, arg in enumerate(self.args):
+        for i, arg in enumerate(arguments):
             if isinstance(arg, Expr) and arg.head is Head.kw:
                 break
+
         _args = arguments[:i]
         _kwargs = arguments[i:]
-        args_ns: dict[Union[str, Symbol], Any] = dict(**ns, **{symbol(_tuple): _tuple})
+
+        # prepare namespaces
+        args_ns: dict[Union[str, _Expr], Any] = ns.copy()
+        args_ns[symbol(_tuple)] = _tuple
         kwargs_ns = ns.copy()
+
+        # evaluate
         args = Expr(Head.call, [symbol(_tuple)] + _args).eval(args_ns)
         kwargs = Expr(Head.call, [symbol(dict)] + _kwargs).eval(kwargs_ns)
         return args, kwargs

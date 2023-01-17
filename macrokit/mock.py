@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any
 import builtins
 
-from .expression import Expr
-from .head import Head
-from .macro import BINOP_MAP, UNOP_MAP
-from ._symbol import Symbol
+from macrokit.expression import Expr
+from macrokit.head import Head
+from macrokit.macro import BINOP_MAP, UNOP_MAP
+from macrokit._symbol import Symbol
 
 
 def _mock_to_expr(mock: Mock):

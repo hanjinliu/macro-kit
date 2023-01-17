@@ -1,6 +1,6 @@
 from typing import Callable, Hashable, TypeVar, Iterable, Union
-from ._symbol import Symbol
-from .head import Head
+from macrokit._symbol import Symbol
+from macrokit.head import Head
 
 _T = TypeVar("_T", bound=Hashable)
 _A = TypeVar("_A")

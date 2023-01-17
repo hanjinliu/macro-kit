@@ -9,12 +9,13 @@ class Symbol:
     """A class that represents Python symbol in the context of metaprogramming."""
 
     # Map of how to convert object into a symbol.
-    _type_map: Dict[type, Callable] = {
+    _type_map: Dict[type, Callable[[Any], str]] = {
         type: lambda e: e.__name__,
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,
         MethodType: lambda e: e.__name__,
         type(None): lambda e: "None",
+        type(...): lambda e: "...",
         str: repr,
         bytes: repr,
         bytearray: repr,
@@ -58,6 +59,10 @@ class Symbol:
         if not isinstance(newname, str):
             raise TypeError(f"Cannot set non-string to name: {newname!r}.")
         self._name = newname
+
+    def eval(self, ns={}) -> Any:
+        """Evaluate symbol."""
+        return eval(self.name, ns, {})
 
     def __repr__(self) -> str:
         """Return a Julia-like repr."""
@@ -111,6 +116,15 @@ class Symbol:
             self._name, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default
         )
 
+    @classmethod
+    def make_symbol_str(cls, obj: Any) -> str:
+        """Make a string for symbol."""
+        # hexadecimals are easier to distinguish
+        _id = id(obj)
+        if obj is not None:
+            cls._variables.add(_id)
+        return f"var{hex(_id)}"
+
     @overload
     @classmethod
     def register_type(
@@ -135,27 +149,19 @@ class Symbol:
         """
         Define a dispatcher for macro recording.
 
-        .. code-block:: python
-
-            register_type(np.ndarray,
-                          lambda arr: str(arr.tolist())
-                          )
+        >>> register_type(np.ndarray, lambda arr: str(arr.tolist()))
 
         or
 
-        .. code-block:: python
-
-            @register_type(np.ndarray)
-            def _(arr):
-                return str(arr.tolist())
+        >>> @register_type(np.ndarray)
+        >>> def _(arr):
+        ...     return str(arr.tolist())
 
         or if you defined a new type
 
-        .. code-block:: python
-
-            @register_type(lambda t: t.name)
-            class T:
-                ...
+        >>> @register_type(lambda t: t.name)
+        >>> class T:
+        ...     ...
 
         """
         if isinstance(type_or_function, type):

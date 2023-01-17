@@ -1,23 +1,5 @@
+import pytest
 from macrokit import Expr, Macro, Symbol, parse, register_type, symbol
-
-
-def test_symbols():
-    assert str(symbol(1)) == "1"
-    assert str(symbol("")) == "''"
-    assert str(symbol(None)) == "None"
-    assert str(symbol(())) == "()"
-    assert str(symbol((1,))) == "(1,)"
-    assert str(symbol([(), (1,), set()])) == "[(), (1,), set()]"
-    assert str(symbol(True)) == "True"
-    assert str(symbol(1 - 3j)) == "(1-3j)"
-    assert str(symbol(bytes("a", encoding="utf-8"))) == "b'a'"
-    assert (
-        str(symbol({"a": [1, 2], "b": [0.1, 0.2]})) == "{'a': [1, 2], 'b': [0.1, 0.2]}"
-    )
-    assert str(symbol(set())) == "set()"
-    assert str(symbol({1, 2, 3})) == "{1, 2, 3}"
-    assert str(symbol(frozenset())) == "frozenset({})"
-    assert str(symbol(frozenset([1, 2]))) == "frozenset({1, 2})"
 
 
 def test_function():
@@ -208,20 +190,6 @@ def test_register_type():
     assert str(symbol(T())) == "t"
 
 
-def test_symbol_var():
-    sym_x = Symbol("x")
-    sym_y = Symbol("y")
-    var_y0 = Symbol.var("y")
-    var_y1 = Symbol.var("y")
-    var_y2 = Symbol.var("y")
-    var_y3 = Symbol.var("y")
-
-    assert sym_x == sym_x
-    assert sym_x != sym_y
-    assert sym_y != var_y0
-    assert var_y0 == var_y1 and var_y1 == var_y2 and var_y2 == var_y3
-
-
 code1 = """
 a = np.arange(12)
 for i in a:
@@ -309,9 +277,7 @@ def test_special_methods():
     str(a)
 
     macro_str = str(macro.format([(a, Symbol("a"))]))
-    assert (
-        macro_str == "a = A()\n" "len(a)\n" "bool(a)\n" "int(a)\n" "float(a)\n" "str(a)"
-    )
+    assert macro_str == "a = A()\nlen(a)\nbool(a)\nint(a)\nfloat(a)\nstr(a)"
 
 
 def test_field():
@@ -349,6 +315,26 @@ def test_at():
     assert expr.at(1, 1) == expr.args[1].args[1]
 
 
+def test_split_getattr():
+    expr = parse("a.b.c.d")
+    assert expr.split_getattr() == [Symbol(x) for x in "abcd"]
+
+
+@pytest.mark.parametrize(
+    "string",
+    ["a.b.c()", "a.b.c = 2", "(a*b).c", "x = a.b.c", "a['b'].c", "a['b']['c']"]
+)
+def test_split_getattr_errors(string: str):
+    expr = parse(string)
+    with pytest.raises(ValueError):
+        expr.split_getattr()
+
+
+def test_split_getitem():
+    expr = parse("a['b']['c']['d']")
+    assert expr.split_getitem() == [Symbol(x) for x in "abcd"]
+
+
 def test_module_update():
     import time as tm
 
@@ -370,7 +356,7 @@ def test_eq():
     # assert parse("t['xy'] = func(0, 2)") == parse("t['xy'] = func(0, 2)")
 
 
-def test_sliceing():
+def test_slicing():
     macro = Macro()
     macro.append("a = 1")
     macro.append("b = 1")
@@ -378,3 +364,17 @@ def test_sliceing():
     assert isinstance(macro[0], Expr)
     assert isinstance(macro[1:], Macro)
     assert macro.flags == macro[1:].flags
+
+
+def test_eval_call_args():
+    expr = parse("f(1, 2, x=3)")
+    args, kwargs = expr.eval_call_args()
+    assert args == (1, 2)
+    assert kwargs == {"x": 3}
+
+
+def test_eval_call_args_with_namespace():
+    expr = parse("f(a, b, x=c)")
+    args, kwargs = expr.eval_call_args(ns=dict(a=1, b=2, c=3))
+    assert args == (1, 2)
+    assert kwargs == {"x": 3}

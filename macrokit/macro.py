@@ -20,9 +20,9 @@ from typing import (
 
 from typing_extensions import TypedDict
 
-from .ast import parse
-from .expression import EXEC, Expr, Head, symbol
-from ._symbol import Symbol
+from macrokit.ast import parse
+from macrokit.expression import EXEC, Expr, Head, symbol
+from macrokit._symbol import Symbol
 
 _NON_RECORDABLE = (
     "__new__",

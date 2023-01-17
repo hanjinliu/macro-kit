@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from typing import Any
+import builtins
 
-from .expression import Expr
-from .head import Head
-from .macro import BINOP_MAP, UNOP_MAP
-from ._symbol import Symbol
+from macrokit.expression import Expr
+from macrokit.head import Head
+from macrokit.macro import BINOP_MAP, UNOP_MAP
+from macrokit._symbol import Symbol
 
 
 def _mock_to_expr(mock: Mock):
@@ -21,7 +22,7 @@ class Mock:
 
     >>> mock = Mock("a")
     >>> mock.b  # Mock<a.b>
-    >>> mock.method(arg=10)  # Mock<a.methodarg=10>
+    >>> mock.method(arg=10)  # Mock<a.method(arg=10)>
 
     """
 
@@ -47,7 +48,7 @@ class Mock:
         expr = Expr(Head.getitem, [self._sym, key])
         return self.__class__(expr)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Mock:
         """Return a Mock with expression 'mock(*args, **kwargs)'."""
         expr = Expr.parse_call(self._sym, args, kwargs)
         return self.__class__(expr)
@@ -168,3 +169,54 @@ class Mock:
     def __invert__(self) -> Mock:
         """Return a Mock with expression '~mock'."""
         return self._unop("__invert__")
+
+
+def tuple(iterable, /):
+    """Construct tuple-expression."""
+    return Expr.parse_call(builtins.tuple, list(iterable))
+
+
+def dict(*args, **kwargs):
+    """Construct dict-expression."""
+    kwargs = builtins.dict(*args, **kwargs)
+    return Expr.parse_call(builtins.dict, kwargs=kwargs)
+
+
+def set(iterable, /):
+    """Construct set-expression."""
+    return Expr.parse_call(builtins.set, list(iterable))
+
+
+def list(iterable, /):
+    """Construct list-expression."""
+    return Expr.parse_call(builtins.list, list(iterable))
+
+
+def frozenset(iterable, /):
+    """Construct frozenset-expression."""
+    return Expr.parse_call(builtins.frozenset, list(iterable))
+
+
+def slice(*args):
+    """Construct slice-expression."""
+    return Expr.parse_call(builtins.slice, *args)
+
+
+def range(*args):
+    """Construct range-expression."""
+    return Expr.parse_call(builtins.range, *args)
+
+
+def getattr(obj, name: str):
+    """Construct getattr-expression."""
+    return Expr(Head.getattr, [obj, name])
+
+
+def setattr(obj, name: str, value):
+    """Construct setattr-expression."""
+    return Expr.parse_setattr(obj, name, value)
+
+
+def delattr(obj, name: str):
+    """Construct delattr-expression."""
+    return Expr.parse_delattr(obj, name)

@@ -116,6 +116,15 @@ class Symbol:
             self._name, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default
         )
 
+    @classmethod
+    def make_symbol_str(cls, obj: Any) -> str:
+        """Make a string for symbol."""
+        # hexadecimals are easier to distinguish
+        _id = id(obj)
+        if obj is not None:
+            cls._variables.add(_id)
+        return f"var{hex(_id)}"
+
     @overload
     @classmethod
     def register_type(

@@ -268,6 +268,35 @@ class Expr:
             raise RuntimeError("Unreachable in setitem expression.")
         return obj, attr, args, kwargs
 
+    def eval_call_args(
+        self,
+        ns: dict = {},
+    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+        """
+        Evaluate arguments in call expression.
+
+        >>> expr = parse("f(1, 2, x=3)")
+        >>> expr.eval_call_args()  # (1, 2), {"x": 3}
+
+        Parameters
+        ----------
+        ns : Dict[str, Any], optional
+            Namespace used for evaluation.
+        """
+        if self.head is not Head.call:
+            raise ValueError(f"Expected {Head.call}, got {self.head}.")
+        arguments = self.args[1:]
+        for i, arg in enumerate(self.args):
+            if isinstance(arg, Expr) and arg.head is Head.kw:
+                break
+        _args = arguments[:i]
+        _kwargs = arguments[i:]
+        args_ns: dict[Union[str, Symbol], Any] = dict(**ns, **{symbol(_tuple): _tuple})
+        kwargs_ns = ns.copy()
+        args = Expr(Head.call, [symbol(_tuple)] + _args).eval(args_ns)
+        kwargs = Expr(Head.call, [symbol(dict)] + _kwargs).eval(kwargs_ns)
+        return args, kwargs
+
     @classmethod
     def parse_setitem(cls, obj: Any, key: Any, value: Any) -> "Expr":
         """Parse ``obj[key] = value``."""
@@ -512,13 +541,8 @@ def _check_format_mapping(mapping_list: Iterable) -> Dict[Symbol, _Expr]:
     return _dict
 
 
-def make_symbol_str(obj: Any):
-    """Make a string for symbol."""
-    # hexadecimals are easier to distinguish
-    _id = id(obj)
-    if obj is not None:
-        Symbol._variables.add(_id)
-    return f"var{hex(_id)}"
+def _tuple(*args) -> tuple:
+    return args
 
 
 def symbol(obj: Any, constant: bool = True) -> _Expr:
@@ -548,7 +572,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     obj_type = type(obj)
     obj_id = id(obj)
     if not constant or obj_id in Symbol._variables:
-        seq = make_symbol_str(obj)
+        seq = Symbol.make_symbol_str(obj)
         constant = False
     elif obj_type in Symbol._type_map:
         seq = Symbol._type_map[obj_type](obj)
@@ -588,7 +612,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         else:
             seq = f"{obj_type.__name__}({{{seq}}})"
     elif isinstance(obj, Number):  # int, float, bool, ...
-        seq = obj
+        seq = str(obj)
     elif isinstance(obj, ModuleType):
         # Register module to the default namespace of Symbol class. This function is
         # called every time a module type object is converted to a Symbol because users
@@ -614,7 +638,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
                 Symbol._subclass_map[obj_type] = k
                 break
         else:
-            seq = make_symbol_str(obj)
+            seq = Symbol.make_symbol_str(obj)
             constant = False
 
     if isinstance(seq, (Symbol, Expr)):

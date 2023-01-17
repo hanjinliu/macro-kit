@@ -364,3 +364,17 @@ def test_slicing():
     assert isinstance(macro[0], Expr)
     assert isinstance(macro[1:], Macro)
     assert macro.flags == macro[1:].flags
+
+
+def test_eval_call_args():
+    expr = parse("f(1, 2, x=3)")
+    args, kwargs = expr.eval_call_args()
+    assert args == (1, 2)
+    assert kwargs == {"x": 3}
+
+
+def test_eval_call_args_with_namespace():
+    expr = parse("f(a, b, x=c)")
+    args, kwargs = expr.eval_call_args(ns=dict(a=1, b=2, c=3))
+    assert args == (1, 2)
+    assert kwargs == {"x": 3}

@@ -1,3 +1,4 @@
+import pytest
 from macrokit import Expr, Macro, Symbol, parse, register_type, symbol
 
 
@@ -309,9 +310,7 @@ def test_special_methods():
     str(a)
 
     macro_str = str(macro.format([(a, Symbol("a"))]))
-    assert (
-        macro_str == "a = A()\n" "len(a)\n" "bool(a)\n" "int(a)\n" "float(a)\n" "str(a)"
-    )
+    assert macro_str == "a = A()\nlen(a)\nbool(a)\nint(a)\nfloat(a)\nstr(a)"
 
 
 def test_field():
@@ -349,6 +348,24 @@ def test_at():
     assert expr.at(1, 1) == expr.args[1].args[1]
 
 
+def test_split_getattr():
+    expr = parse("a.b.c.d")
+    assert expr.split_getattr() == [Symbol(x) for x in "abcd"]
+
+@pytest.mark.parametrize(
+    "string",
+    ["a.b.c()", "a.b.c = 2", "(a*b).c", "x = a.b.c", "a['b'].c", "a['b']['c']",]
+)
+def test_split_getattr_errors(string: str):
+    expr = parse(string)
+    with pytest.raises(ValueError):
+        expr.split_getattr()
+
+def test_split_getitem():
+    expr = parse("a['b']['c']['d']")
+    assert expr.split_getitem() == [Symbol("a")] + list("bcd")
+
+
 def test_module_update():
     import time as tm
 
@@ -370,7 +387,7 @@ def test_eq():
     # assert parse("t['xy'] = func(0, 2)") == parse("t['xy'] = func(0, 2)")
 
 
-def test_sliceing():
+def test_slicing():
     macro = Macro()
     macro.append("a = 1")
     macro.append("b = 1")

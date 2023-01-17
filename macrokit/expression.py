@@ -209,7 +209,7 @@ class Expr:
     def parse_init(
         cls,
         obj: Any,
-        init_cls: type = None,
+        init_cls: Union[type, "Expr"] = None,
         args: Tuple[Any, ...] = None,
         kwargs: dict = None,
     ) -> "Expr":

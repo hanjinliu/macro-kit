@@ -2,6 +2,7 @@ from copy import deepcopy
 from numbers import Number
 from types import ModuleType
 from typing import Any, Callable, Iterable, Iterator, overload, Union, List, Tuple, Dict
+import inspect
 
 from ._validator import validator
 from .head import EXEC, Head
@@ -239,7 +240,7 @@ class Expr:
 
     @classmethod
     def parse_setitem(cls, obj: Any, key: Any, value: Any) -> "Expr":
-        """Parse ``obj[key] = value)``."""
+        """Parse ``obj[key] = value``."""
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
@@ -304,6 +305,41 @@ class Expr:
 
         if not yielded:
             yield self
+
+    def _split(self, head: Head) -> List[Any]:
+        if self.head is not head:
+            raise ValueError(f"Expected {head}, got {self.head}.")
+        left = self.args[0]
+        right = self.args[1]
+        if isinstance(left, Symbol):
+            return [left, right]
+        else:
+            return left._split(head) + [right]
+
+    def split_getattr(self) -> List[Symbol]:
+        """
+        Split an expression into a list of get-attribute symbols.
+
+        >>> expr = parse("a.b.c.d")
+        >>> expr.split_getattr()  # [:a, :b, :c, :d]
+        """
+        return self._split(Head.getattr)
+
+    def split_getitem(self) -> List[Union[Symbol, str]]:
+        """
+        Split an expression into a list of get-item symbols/strings.
+
+        >>> expr = parse("a['b']['c']['d']")
+        >>> expr.split_getattr()  # [:a, 'b', 'c', 'd']
+        """
+        return self._split(Head.getitem)
+
+    @classmethod
+    def from_callble(cls, f: Callable):
+        """Create function expression from the function itself."""
+        from .ast import parse
+
+        return parse(inspect.getsource(f))
 
     @overload
     def format(self, mapping: dict, inplace: bool = False) -> "Expr":

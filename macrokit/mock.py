@@ -21,7 +21,7 @@ class Mock:
 
     >>> mock = Mock("a")
     >>> mock.b  # Mock<a.b>
-    >>> mock.method(arg=10)  # Mock<a.methodarg=10>
+    >>> mock.method(arg=10)  # Mock<a.method(arg=10)>
 
     """
 
@@ -47,7 +47,7 @@ class Mock:
         expr = Expr(Head.getitem, [self._sym, key])
         return self.__class__(expr)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Mock:
         """Return a Mock with expression 'mock(*args, **kwargs)'."""
         expr = Expr.parse_call(self._sym, args, kwargs)
         return self.__class__(expr)

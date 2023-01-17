@@ -256,6 +256,18 @@ class Expr:
                 args.append(arg)
         return self.args[0], tuple(args), kwargs
 
+    def unparse_method(
+        self,
+    ) -> Tuple[_Expr, Symbol, Tuple[_Expr, ...], Dict[str, _Expr]]:
+        """Unparse ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
+        fn, args, kwargs = self.unparse_call()
+        if not isinstance(fn, Expr) or fn.head is not Head.getattr:
+            raise ValueError("Not a method call.")
+        obj, attr = fn.args
+        if not isinstance(attr, Symbol):
+            raise RuntimeError("Unreachable in setitem expression.")
+        return obj, attr, args, kwargs
+
     @classmethod
     def parse_setitem(cls, obj: Any, key: Any, value: Any) -> "Expr":
         """Parse ``obj[key] = value``."""

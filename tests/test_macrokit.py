@@ -352,18 +352,20 @@ def test_split_getattr():
     expr = parse("a.b.c.d")
     assert expr.split_getattr() == [Symbol(x) for x in "abcd"]
 
+
 @pytest.mark.parametrize(
     "string",
-    ["a.b.c()", "a.b.c = 2", "(a*b).c", "x = a.b.c", "a['b'].c", "a['b']['c']",]
+    ["a.b.c()", "a.b.c = 2", "(a*b).c", "x = a.b.c", "a['b'].c", "a['b']['c']"]
 )
 def test_split_getattr_errors(string: str):
     expr = parse(string)
     with pytest.raises(ValueError):
         expr.split_getattr()
 
+
 def test_split_getitem():
     expr = parse("a['b']['c']['d']")
-    assert expr.split_getitem() == [Symbol("a")] + list("bcd")
+    assert expr.split_getitem() == [Symbol(x) for x in "abcd"]
 
 
 def test_module_update():

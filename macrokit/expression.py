@@ -325,12 +325,12 @@ class Expr:
         """
         return self._split(Head.getattr)
 
-    def split_getitem(self) -> List[Union[Symbol, str]]:
+    def split_getitem(self) -> List[Symbol]:
         """
         Split an expression into a list of get-item symbols/strings.
 
         >>> expr = parse("a['b']['c']['d']")
-        >>> expr.split_getattr()  # [:a, 'b', 'c', 'd']
+        >>> expr.split_getitem()  # [:a, :b, :c, :d]
         """
         return self._split(Head.getitem)
 

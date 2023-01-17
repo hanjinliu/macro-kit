@@ -287,6 +287,24 @@ class Expr:
         return obj, attr, value
 
     @classmethod
+    def parse_delitem(cls, obj: Any, key: Any) -> "Expr":
+        """Parse ``del obj[key]``."""
+        target = cls(Head.getitem, [symbol(obj), symbol(key)])
+        return cls(Head.del_, [target])
+
+    def unparse_delitem(self) -> Tuple[_Expr, Symbol]:
+        """Return ``obj, key`` if ``self`` is ``del obj[key]``."""
+        if self.head is not Head.del_:
+            raise ValueError("Not a delitem expression.")
+        arg = self.args[0]
+        if not isinstance(arg, Expr) or arg.head is not Head.getitem:
+            raise ValueError("Not a delitem expression.")
+        obj, attr = arg.args
+        if not isinstance(attr, Symbol):
+            raise RuntimeError("Unreachable in setattr expression.")
+        return obj, attr
+
+    @classmethod
     def parse_setattr(cls, obj: Any, key: str, value: Any) -> "Expr":
         """Parse ``obj.key = value``."""
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
@@ -303,6 +321,24 @@ class Expr:
         if not isinstance(attr, Symbol):
             raise RuntimeError("Unreachable in setattr expression.")
         return obj, attr, value
+
+    @classmethod
+    def parse_delattr(cls, obj: Any, key: str) -> "Expr":
+        """Parse ``del obj.key``."""
+        target = cls(Head.getattr, [symbol(obj), Symbol(key)])
+        return cls(Head.del_, [target])
+
+    def unparse_delattr(self) -> Tuple[_Expr, Symbol]:
+        """Return ``obj, key`` if ``self`` is ``del obj.key``."""
+        if self.head is not Head.del_:
+            raise ValueError("Not a delattr expression.")
+        arg = self.args[0]
+        if not isinstance(arg, Expr) or arg.head is not Head.getattr:
+            raise ValueError("Not a delattr expression.")
+        obj, attr = arg.args
+        if not isinstance(attr, Symbol):
+            raise RuntimeError("Unreachable in setattr expression.")
+        return obj, attr
 
     @classmethod
     def _convert_args(cls, args: Tuple[Any, ...], kwargs: dict) -> list:

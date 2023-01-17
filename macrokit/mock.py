@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import builtins
 
 from .expression import Expr
 from .head import Head
@@ -168,3 +169,54 @@ class Mock:
     def __invert__(self) -> Mock:
         """Return a Mock with expression '~mock'."""
         return self._unop("__invert__")
+
+
+def tuple(iterable, /):
+    """Construct tuple-expression."""
+    return Expr.parse_call(builtins.tuple, list(iterable))
+
+
+def dict(*args, **kwargs):
+    """Construct dict-expression."""
+    kwargs = builtins.dict(*args, **kwargs)
+    return Expr.parse_call(builtins.dict, kwargs=kwargs)
+
+
+def set(iterable, /):
+    """Construct set-expression."""
+    return Expr.parse_call(builtins.set, list(iterable))
+
+
+def list(iterable, /):
+    """Construct list-expression."""
+    return Expr.parse_call(builtins.list, list(iterable))
+
+
+def frozenset(iterable, /):
+    """Construct frozenset-expression."""
+    return Expr.parse_call(builtins.frozenset, list(iterable))
+
+
+def slice(*args):
+    """Construct slice-expression."""
+    return Expr.parse_call(builtins.slice, *args)
+
+
+def range(*args):
+    """Construct range-expression."""
+    return Expr.parse_call(builtins.range, *args)
+
+
+def getattr(obj, name: str):
+    """Construct getattr-expression."""
+    return Expr(Head.getattr, [obj, name])
+
+
+def setattr(obj, name: str, value):
+    """Construct setattr-expression."""
+    return Expr.parse_setattr(obj, name, value)
+
+
+def delattr(obj, name: str):
+    """Construct delattr-expression."""
+    return Expr.parse_delattr(obj, name)

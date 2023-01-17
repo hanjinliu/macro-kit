@@ -70,6 +70,8 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.annotate: lambda e, i: f"{str_(e.args[0], i)}: {str_(e.args[1])}",
 }
 
+_Expr = Union[Symbol, "Expr"]
+
 
 class Expr:
     """An expression object for metaprogramming."""
@@ -238,17 +240,57 @@ class Expr:
         inputs = [func] + cls._convert_args(args, kwargs)
         return cls(head=Head.call, args=inputs)
 
+    def unparse_call(self) -> Tuple[_Expr, Tuple[_Expr, ...], Dict[str, _Expr]]:
+        """Unparse ``func(*args, **kwargs)`` to (func, args, kwargs)."""
+        if self.head is not Head.call:
+            raise ValueError(f"Expected {Head.call}, got {self.head}.")
+        args = []
+        kwargs = {}
+        for arg in self.args[1:]:
+            if isinstance(arg, Expr) and arg.head is Head.kw:
+                sym = arg.args[0]
+                if not isinstance(sym, Symbol):
+                    raise RuntimeError(f"Expected Symbol, got {type(sym)}.")
+                kwargs[sym.name] = arg.args[1]
+            else:
+                args.append(arg)
+        return self.args[0], tuple(args), kwargs
+
     @classmethod
     def parse_setitem(cls, obj: Any, key: Any, value: Any) -> "Expr":
         """Parse ``obj[key] = value``."""
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
+    def unparse_setitem(self) -> Tuple[_Expr, Symbol, _Expr]:
+        """Return ``obj, key, value`` if ``self`` is ``obj[key] = value``."""
+        if self.head is not Head.assign:
+            raise ValueError("Not a setitem expression.")
+        target, value = self.args
+        if not isinstance(target, Expr) or target.head is not Head.getitem:
+            raise ValueError("Not a setitem expression.")
+        obj, attr = target.args
+        if not isinstance(attr, Symbol):
+            raise RuntimeError("Unreachable in setitem expression.")
+        return obj, attr, value
+
     @classmethod
     def parse_setattr(cls, obj: Any, key: str, value: Any) -> "Expr":
         """Parse ``obj.key = value``."""
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
+
+    def unparse_setattr(self) -> Tuple[_Expr, Symbol, _Expr]:
+        """Return ``obj, key, value`` if ``self`` is ``obj.key = value``."""
+        if self.head is not Head.assign:
+            raise ValueError("Not a setattr expression.")
+        target, value = self.args
+        if not isinstance(target, Expr) or target.head is not Head.getattr:
+            raise ValueError("Not a setattr expression.")
+        obj, attr = target.args
+        if not isinstance(attr, Symbol):
+            raise RuntimeError("Unreachable in setattr expression.")
+        return obj, attr, value
 
     @classmethod
     def _convert_args(cls, args: Tuple[Any, ...], kwargs: dict) -> list:
@@ -261,23 +303,23 @@ class Expr:
         return inputs
 
     @classmethod
-    def parse_object(cls, a: Any) -> Union[Symbol, "Expr"]:
+    def parse_object(cls, a: Any) -> _Expr:
         """Convert an object into a macro-type."""
         return a if isinstance(a, cls) else symbol(a)
 
     def issetattr(self) -> bool:
         """Determine if an expression is in the form of ``setattr(obj, key value)``."""
-        if self.head == Head.assign:
+        if self.head is Head.assign:
             target = self.args[0]
-            if isinstance(target, Expr) and target.head == Head.getattr:
+            if isinstance(target, Expr) and target.head is Head.getattr:
                 return True
         return False
 
     def issetitem(self) -> bool:
         """Determine if an expression is in the form of ``setitem(obj, key value)``."""
-        if self.head == Head.assign:
+        if self.head is Head.assign:
             target = self.args[0]
-            if isinstance(target, Expr) and target.head == Head.getitem:
+            if isinstance(target, Expr) and target.head is Head.getitem:
                 return True
         return False
 
@@ -330,7 +372,7 @@ class Expr:
         Split an expression into a list of get-item symbols/strings.
 
         >>> expr = parse("a['b']['c']['d']")
-        >>> expr.split_getitem()  # [:a, :b, :c, :d]
+        >>> expr.split_getitem()  # [:a, :'b', :'c', :'d']
         """
         return self._split(Head.getitem)
 

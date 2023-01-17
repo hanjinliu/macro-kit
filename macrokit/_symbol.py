@@ -9,12 +9,13 @@ class Symbol:
     """A class that represents Python symbol in the context of metaprogramming."""
 
     # Map of how to convert object into a symbol.
-    _type_map: Dict[type, Callable] = {
+    _type_map: Dict[type, Callable[[Any], str]] = {
         type: lambda e: e.__name__,
         FunctionType: lambda e: e.__name__,
         BuiltinFunctionType: lambda e: e.__name__,
         MethodType: lambda e: e.__name__,
         type(None): lambda e: "None",
+        type(...): lambda e: "...",
         str: repr,
         bytes: repr,
         bytearray: repr,

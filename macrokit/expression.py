@@ -179,10 +179,10 @@ class Expr:
         }
 
         # use registered modules
-        if Symbol._module_symbols:
+        if Symbol._stored_symbols:
             format_dict: Dict[Symbol, _Expr] = {}
-            for id_, sym in Symbol._module_symbols.items():
-                mod = Symbol._module_map[sym.name]
+            for id_, sym in Symbol._stored_symbols.items():
+                mod = Symbol._stored_variable_map[sym.name]
                 vstr = f"var{hex(id_)}"
                 format_dict[sym] = Symbol(vstr)
                 _glb[vstr] = mod
@@ -625,16 +625,16 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         # called every time a module type object is converted to a Symbol because users
         # always have to pass the module object to the global variables when calling
         # eval function.
-        if obj_id in Symbol._module_symbols.keys():
-            sym = Symbol._module_symbols[obj_id]
+        if obj_id in Symbol._stored_symbols.keys():
+            sym = Symbol._stored_symbols[obj_id]
         else:
             *main, seq = obj.__name__.split(".")
             sym = Symbol(seq, obj_id)
             sym.constant = True
             if len(main) == 0:
                 # submodules should not be registered
-                Symbol._module_symbols[obj_id] = sym
-                Symbol._module_map[seq] = obj
+                Symbol._stored_symbols[obj_id] = sym
+                Symbol._stored_variable_map[seq] = obj
         return sym
     elif hasattr(obj, "__name__"):
         seq = obj.__name__
@@ -655,3 +655,21 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         sym = Symbol(seq, obj_id)
         sym.constant = constant
         return sym
+
+
+def store(obj: Any) -> None:
+    """Store a variable in a global Symbol namespace."""
+    sym = symbol(obj)
+    if not isinstance(sym, Symbol):
+        raise ValueError(f"Object {obj!r} was not converted into a Symbol.")
+    if sym.constant:
+        raise ValueError(f"Object {obj!r} returned a constant value.")
+    obj_id = id(obj)
+    name = sym.name
+    if not name.isidentifier():
+        raise ValueError(f"{name} is not an identifier.")
+    if (_var := Symbol._stored_variable_map.get(name, None)) is not None:
+        raise ValueError(f"Variable identifier {name} collides with {_var!r}")
+    Symbol._stored_symbols[obj_id] = sym
+    Symbol._stored_variable_map[name] = obj
+    return None

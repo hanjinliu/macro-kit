@@ -128,8 +128,8 @@ else:
 @from_ast.register
 def _name(ast_object: ast.Name):
     name = ast_object.id
-    if name in Symbol._module_map.keys():
-        return Symbol._module_map[name]
+    if name in Symbol._stored_variable_map.keys():
+        return Symbol._stored_variable_map[name]
     return Symbol(ast_object.id)
 
 

@@ -1,5 +1,5 @@
 import inspect
-from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
+from types import BuiltinFunctionType, FunctionType, MethodType
 from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
 
 T = TypeVar("T")
@@ -32,9 +32,9 @@ class Symbol:
     # ID of global variables
     _variables: Set[int] = set()
 
-    # Module symbols
-    _module_symbols: Dict[int, "Symbol"] = {}
-    _module_map: Dict[str, ModuleType] = {}
+    # Stored symbols
+    _stored_symbols: Dict[int, "Symbol"] = {}
+    _stored_variable_map: Dict[str, Any] = {}
 
     def __init__(self, seq: Any, object_id: int = None):
         self._name = str(seq)
@@ -60,9 +60,15 @@ class Symbol:
             raise TypeError(f"Cannot set non-string to name: {newname!r}.")
         self._name = newname
 
-    def eval(self, ns={}) -> Any:
+    def eval(self) -> Any:
         """Evaluate symbol."""
-        return eval(self.name, ns, {})
+        if self.constant:
+            out = eval(self.name, {}, {})
+        else:
+            out = Symbol._stored_variable_map.get(self.name, None)
+            if out is None:
+                raise ValueError(f"Variable {self.name} not found in namespace")
+        return out
 
     def __repr__(self) -> str:
         """Return a Julia-like repr."""

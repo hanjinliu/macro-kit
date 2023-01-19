@@ -1,5 +1,7 @@
 import pytest
-from macrokit import Expr, Macro, Symbol, parse, register_type, symbol, store
+from macrokit import (
+    Expr, Macro, Symbol, parse, register_type, unregister_type, symbol, store
+)
 
 
 def test_function():
@@ -190,7 +192,7 @@ def test_register_type():
     assert str(symbol(T())) == "t"
 
     # cleanup
-    Symbol._type_map.pop(np.ndarray)
+    unregister_type(np.ndarray)
 
 
 code1 = """

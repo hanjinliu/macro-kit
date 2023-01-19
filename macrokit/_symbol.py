@@ -1,6 +1,7 @@
+from contextlib import contextmanager
 import inspect
 from types import BuiltinFunctionType, FunctionType, MethodType
-from typing import Any, Callable, Dict, Set, Type, TypeVar, overload, Optional
+from typing import Any, Callable, Dict, Mapping, Set, Type, TypeVar, overload, Optional
 
 T = TypeVar("T")
 
@@ -204,8 +205,28 @@ class Symbol:
 
             return _register_type
 
+    @classmethod
+    def unregister_type(cls, type_: Type[T], raises: bool = True) -> None:
+        """Unregister a type."""
+        if cls._type_map.pop(type_, None) is None and raises:
+            raise KeyError(f"{type_} is not registered.")
+
+    @contextmanager
+    @classmethod
+    def type_registered(cls, typemap: Mapping[Type[T], Callable[[T], Any]]):
+        """Register types in a dictionary."""
+        _old_type_map = cls._type_map.copy()
+        cls._type_map.update(typemap)
+        try:
+            yield
+        finally:
+            cls._type_map = _old_type_map
+
 
 register_type = Symbol.register_type
+unregister_type = Symbol.unregister_type
+type_registered = Symbol.type_registered
+
 try:
     import cython
 except ImportError:  # pragma: no cover

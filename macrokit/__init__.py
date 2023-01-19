@@ -4,13 +4,14 @@ __version__ = "0.3.9"
 __author__ = "Hanjin Liu"
 __email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 
-from macrokit._symbol import Symbol, register_type, COMPILED
+from macrokit._symbol import Symbol, register_type, unregister_type, type_registered
 from macrokit.expression import Expr, Head, symbol, store
 from macrokit.macro import Macro, MacroFlags
 from macrokit.mock import Mock
 from macrokit.ast import parse
 from functools import wraps
 
+from macrokit._symbol import COMPILED
 
 __all__ = [
     "Symbol",
@@ -21,6 +22,8 @@ __all__ = [
     "symbol",
     "store",
     "register_type",
+    "unregister_type",
+    "type_registered",
     "parse",
     "blocked",
     "record",

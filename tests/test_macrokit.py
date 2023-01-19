@@ -1,5 +1,5 @@
 import pytest
-from macrokit import Expr, Macro, Symbol, parse, register_type, symbol
+from macrokit import Expr, Macro, Symbol, parse, register_type, symbol, store
 
 
 def test_function():
@@ -188,6 +188,9 @@ def test_register_type():
             self.name = "t"
 
     assert str(symbol(T())) == "t"
+
+    # cleanup
+    Symbol._type_map.pop(np.ndarray)
 
 
 code1 = """
@@ -378,3 +381,38 @@ def test_eval_call_args_with_namespace():
     args, kwargs = expr.eval_call_args(ns=dict(a=1, b=2, c=3))
     assert args == (1, 2)
     assert kwargs == {"x": 3}
+
+
+def test_store():
+    # A array like object
+    class X:
+        def __init__(self, val):
+            self.value = list(val)
+
+        @classmethod
+        def arange(cls, n: int):
+            return cls(range(n))
+
+        def __add__(self, val: int):
+            return X(x + val for x in self.value)
+
+        def __eq__(self, other: "X"):
+            return self.value == other.value
+
+    x = X.arange(5)
+
+    def fn(x):
+        return x + 1
+
+    store(x)
+    store(fn)
+
+    _x = symbol(x)
+    _fn = symbol(fn)
+
+    assert _x.eval() == x
+    assert _fn.eval() is fn
+
+    _fn_x_expr = Expr.parse_call(_fn, (x,))
+    out = _fn_x_expr.eval()
+    assert out == x + 1

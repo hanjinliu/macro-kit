@@ -60,14 +60,22 @@ class Symbol:
             raise TypeError(f"Cannot set non-string to name: {newname!r}.")
         self._name = newname
 
-    def eval(self) -> Any:
-        """Evaluate symbol."""
-        if self.constant:
-            out = eval(self.name, {}, {})
-        else:
+    def eval(self, _globals: dict = {}, _locals: dict = {}) -> Any:
+        """
+        Evaluate symbol.
+
+        Parameters
+        ----------
+        _globals, _locals : dict, optional
+            Just for consistency with ``Expr.eval``.
+        """
+        _globals = {str(k): v for k, v in _globals.items()}
+        _locals = _locals.copy()
+        if not _globals:
             out = Symbol._stored_variable_map.get(self.name, None)
-            if out is None:
-                raise ValueError(f"Variable {self.name} not found in namespace")
+            if out is not None:
+                _globals[self.name] = out
+        out = eval(self.name, _globals, _locals)
         return out
 
     def __repr__(self) -> str:

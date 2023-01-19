@@ -35,6 +35,14 @@ def test_symbol_eval_well_defined(val):
     assert symbol(val).eval() == val
 
 
+def test_symbol_eval_name():
+    val = object()
+    sym = symbol(val)
+    with pytest.raises(NameError):
+        sym.eval()
+    assert sym.eval({sym: val}) is val
+
+
 def test_symbol_var():
     sym_x = Symbol("x")
     sym_y = Symbol("y")

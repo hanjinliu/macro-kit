@@ -579,8 +579,10 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     obj_type = type(obj)
     obj_id = id(obj)
     if not constant or obj_id in Symbol._variables:
-        seq = Symbol.make_symbol_str(obj)
+        seq: Union[_Expr, str] = Symbol.make_symbol_str(obj)
         constant = False
+    elif obj_id in Symbol._stored_symbols.keys():
+        seq = Symbol._stored_symbols[obj_id]
     elif obj_type in Symbol._type_map:
         seq = Symbol._type_map[obj_type](obj)
     elif obj_type in Symbol._subclass_map:
@@ -662,13 +664,12 @@ def store(obj: Any) -> None:
     sym = symbol(obj)
     if not isinstance(sym, Symbol):
         raise ValueError(f"Object {obj!r} was not converted into a Symbol.")
-    if sym.constant:
-        raise ValueError(f"Object {obj!r} returned a constant value.")
     obj_id = id(obj)
     name = sym.name
     if not name.isidentifier():
         raise ValueError(f"{name} is not an identifier.")
-    if (_var := Symbol._stored_variable_map.get(name, None)) is not None:
+    if name in Symbol._stored_variable_map:
+        _var = Symbol._stored_variable_map[name]
         raise ValueError(f"Variable identifier {name} collides with {_var!r}")
     Symbol._stored_symbols[obj_id] = sym
     Symbol._stored_variable_map[name] = obj

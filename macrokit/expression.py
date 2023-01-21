@@ -183,7 +183,7 @@ class Expr:
             format_dict: Dict[Symbol, _Expr] = {}
             for id_, sym in Symbol._stored_symbols.items():
                 mod = Symbol._stored_variable_map[sym.name]
-                vstr = f"var{hex(id_)}"
+                vstr = Symbol.symbol_str_for_id(id_)
                 format_dict[sym] = Symbol(vstr)
                 _glb[vstr] = mod
             # Modules will not be registered as alias ("np" will be "numpy" in macro).

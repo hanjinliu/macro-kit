@@ -4,6 +4,7 @@ from types import BuiltinFunctionType, FunctionType, MethodType
 from typing import Any, Callable, Dict, Mapping, Set, Type, TypeVar, overload, Optional
 
 T = TypeVar("T")
+_OFFSET = None
 
 
 class Symbol:
@@ -138,7 +139,30 @@ class Symbol:
         _id = id(obj)
         if obj is not None:
             cls._variables.add(_id)
-        return f"var{hex(_id)}"
+        return cls.symbol_str_for_id(_id)
+
+    @classmethod
+    def symbol_str_for_id(cls, _id: int) -> str:
+        """Create a symbol string based on an ID."""
+        global _OFFSET
+        if _OFFSET is None:
+            _OFFSET = _id
+        a, rem = divmod(_id - _OFFSET, 16)
+        if rem == 0:
+            if a >= 0:
+                return f"var{hex(a)[2:]}"
+            else:
+                return f"var0{hex(a)[3:]}"
+        else:
+            if a >= 0:
+                return f"var{hex(a)[2:]}_{rem}"
+            else:
+                return f"var0{hex(a)[3:]}_{rem}"
+
+    @classmethod
+    def asvar(cls, obj: Any) -> "Symbol":
+        """Convert input object as a variable."""
+        return Symbol(Symbol.make_symbol_str(obj))
 
     @overload
     @classmethod

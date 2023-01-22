@@ -186,7 +186,7 @@ class BaseMacro(Expr, MutableSequence[Union[Symbol, Expr]]):
     def pop(self, index: int = -1) -> Union[Symbol, Expr]:
         """Pop expression from macro."""
         expr = super().pop(index)
-        for cb in self._on_appended:
+        for cb in self._on_popped:
             cb(expr)
         return expr
 

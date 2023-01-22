@@ -631,6 +631,8 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     elif isinstance(obj, Number):  # numpy scalars
         _TYPE_MAP[obj_type] = str
         seq = str(obj)
+    elif callable(obj) and hasattr(obj, "__name__"):  # most custom callables
+        seq = obj.__name__
     else:
         # search for subclasses
         for k, func in _TYPE_MAP.items():
@@ -643,10 +645,9 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
             constant = False
 
     if isinstance(obj, (ModuleType, FunctionType)) and not _stored:
-        # Register module to the default namespace of Symbol class. This function is
-        # called every time a module type object is converted to a Symbol because users
-        # always have to pass the module object to the global variables when calling
-        # eval function.
+        # Register modules/functions to the default namespace because users
+        # always have to pass the object to the global variables when
+        # calling the eval() function.
         *main, seq = obj.__name__.split(".")
         sym = Symbol(seq, obj_id)
         sym.constant = True
@@ -656,7 +657,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         return sym
 
     if isinstance(seq, (Symbol, Expr)):
-        # The outregister_type can be a Symbol or Expr
+        # The output of register_type can be a Symbol or Expr
         return seq
     else:
         sym = Symbol(seq, obj_id)

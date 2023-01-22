@@ -1,7 +1,18 @@
 from contextlib import contextmanager
 import inspect
 from types import BuiltinFunctionType, FunctionType, MethodType
-from typing import Any, Callable, Dict, Mapping, Set, Type, TypeVar, overload, Optional
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Mapping,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    overload,
+    Optional,
+)
 
 T = TypeVar("T")
 _OFFSET = None
@@ -37,9 +48,9 @@ class Symbol:
     # ID of global variables
     _variables: Set[int] = set()
 
-    # Stored symbols
-    _stored_symbols: Dict[int, "Symbol"] = {}
-    _stored_variable_map: Dict[str, Any] = {}
+    # Stored symbols and the actual values. These will be used even after parse()
+    # method, to make parse(str(macro)) executable.
+    _stored_values: Dict[int, Tuple["Symbol", Any]] = {}
 
     def __init__(self, seq: Any, object_id: int = None):
         self._name = str(seq)
@@ -77,9 +88,9 @@ class Symbol:
         _globals = {str(k): v for k, v in _globals.items()}
         _locals = _locals.copy()
         if not _globals:
-            out = Symbol._stored_variable_map.get(self.name, None)
+            out = Symbol._stored_values.get(self.object_id, None)
             if out is not None:
-                _globals[self.name] = out
+                _globals[self.name] = out[1]
         out = eval(self.name, _globals, _locals)
         return out
 

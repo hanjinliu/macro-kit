@@ -346,6 +346,7 @@ def test_module_update():
     time_ = symbol(tm)
     macro = Macro()
     macro.append(Expr("call", [Expr("getattr", [time_, "time"])]))
+    macro.eval()
     macro_str = str(macro)
     assert macro_str == "time.time()"
     re_compiled = parse(macro_str)

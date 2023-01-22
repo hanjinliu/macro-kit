@@ -179,15 +179,14 @@ class Expr:
         }
 
         # use registered modules
-        if Symbol._stored_symbols:
+        if Symbol._stored_values:
             format_dict: Dict[Symbol, _Expr] = {}
-            for id_, sym in Symbol._stored_symbols.items():
-                mod = Symbol._stored_variable_map[sym.name]
+            for id_, (sym, obj) in Symbol._stored_values.items():
                 vstr = Symbol.symbol_str_for_id(id_)
                 format_dict[sym] = Symbol(vstr)
-                _glb[vstr] = mod
+                _glb[vstr] = obj
             # Modules will not be registered as alias ("np" will be "numpy" in macro).
-            # To avoid name collision, it is safer to rename them to "var0x...".
+            # To avoid name collision, it is safer to rename them to "var...".
             self = self.format(format_dict)
 
         if self.head in EXEC:
@@ -552,6 +551,22 @@ def _tuple(*args) -> tuple:
     return args
 
 
+_ID_TO_TUPLE_EXPR: Dict[int, Expr] = {}
+
+
+def store_tuple(obj: tuple[Any, ...]) -> Symbol:
+    """Store a tuple object and make its contents expressed as var00[i]."""
+    if not isinstance(obj, tuple):
+        raise TypeError(f"Expected tuple, got {type(obj)}.")
+    obj_sym = Symbol.asvar(obj)
+    for idx, each in enumerate(obj):
+        expr = Expr(Head.getitem, [obj_sym, idx])
+        _id = id(each)
+        _ID_TO_TUPLE_EXPR[_id] = expr
+        Symbol._variables.add(_id)
+    return obj_sym
+
+
 def symbol(obj: Any, constant: bool = True) -> _Expr:
     """
     Make a proper Symbol or Expr instance from any objects.
@@ -579,10 +594,13 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     obj_type = type(obj)
     obj_id = id(obj)
     if not constant or obj_id in Symbol._variables:
-        seq: Union[_Expr, str] = Symbol.make_symbol_str(obj)
+        if obj_id in _ID_TO_TUPLE_EXPR:
+            seq: Union[str, _Expr] = _ID_TO_TUPLE_EXPR[obj_id]
+        else:
+            seq = Symbol.make_symbol_str(obj)
         constant = False
-    elif obj_id in Symbol._stored_symbols.keys():
-        seq = Symbol._stored_symbols[obj_id]
+    elif obj_id in Symbol._stored_values:
+        seq = Symbol._stored_values[obj_id][0]
     elif obj_type in Symbol._type_map:
         seq = Symbol._type_map[obj_type](obj)
     elif obj_type in Symbol._subclass_map:
@@ -627,16 +645,12 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         # called every time a module type object is converted to a Symbol because users
         # always have to pass the module object to the global variables when calling
         # eval function.
-        if obj_id in Symbol._stored_symbols.keys():
-            sym = Symbol._stored_symbols[obj_id]
-        else:
-            *main, seq = obj.__name__.split(".")
-            sym = Symbol(seq, obj_id)
-            sym.constant = True
-            if len(main) == 0:
-                # submodules should not be registered
-                Symbol._stored_symbols[obj_id] = sym
-                Symbol._stored_variable_map[seq] = obj
+        *main, seq = obj.__name__.split(".")
+        sym = Symbol(seq, obj_id)
+        sym.constant = True
+        if len(main) == 0:
+            # submodules should not be registered
+            Symbol._stored_values[obj_id] = (sym, obj)
         return sym
     elif hasattr(obj, "__name__"):
         seq = obj.__name__
@@ -659,7 +673,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         return sym
 
 
-def store(obj: Any) -> None:
+def store(obj: Any) -> _Expr:
     """Store a variable in a global Symbol namespace."""
     sym = symbol(obj)
     if not isinstance(sym, Symbol):
@@ -668,9 +682,5 @@ def store(obj: Any) -> None:
     name = sym.name
     if not name.isidentifier():
         raise ValueError(f"{name} is not an identifier.")
-    if name in Symbol._stored_variable_map:
-        _var = Symbol._stored_variable_map[name]
-        raise ValueError(f"Variable identifier {name} collides with {_var!r}")
-    Symbol._stored_symbols[obj_id] = sym
-    Symbol._stored_variable_map[name] = obj
-    return None
+    Symbol._stored_values[obj_id] = (sym, obj)
+    return sym

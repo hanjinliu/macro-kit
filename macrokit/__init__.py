@@ -5,7 +5,7 @@ __author__ = "Hanjin Liu"
 __email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 
 from macrokit._symbol import Symbol, register_type, unregister_type, type_registered
-from macrokit.expression import Expr, Head, symbol, store
+from macrokit.expression import Expr, Head, symbol, store_tuple, store
 from macrokit.macro import Macro, MacroFlags
 from macrokit.mock import Mock
 from macrokit.ast import parse
@@ -20,6 +20,7 @@ __all__ = [
     "Macro",
     "Mock",
     "symbol",
+    "store_tuple",
     "store",
     "register_type",
     "unregister_type",

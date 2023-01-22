@@ -1,7 +1,7 @@
 import pytest
 from macrokit import (
     Expr, Macro, Symbol, parse, register_type, unregister_type, symbol,
-    store, store_tuple
+    store, store_sequence
 )
 
 
@@ -422,12 +422,12 @@ def test_store():
     assert out == x + 1
 
 
-def test_store_tuple():
+def test_store_sequence():
     class X:
         pass
 
     tup = (X(), X(), X())
-    store_tuple(tup)
+    store_sequence(tup)
     sym = symbol(tup)
     assert str(symbol(tup[0])) == f"{sym}[0]"
     assert str(symbol(tup[1])) == f"{sym}[1]"

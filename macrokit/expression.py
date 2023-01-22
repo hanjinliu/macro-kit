@@ -2,7 +2,18 @@ import builtins
 from copy import deepcopy
 from numbers import Number
 from types import FunctionType, ModuleType
-from typing import Any, Callable, Iterable, Iterator, overload, Union, List, Tuple, Dict
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Sequence,
+    overload,
+    Union,
+    List,
+    Tuple,
+    Dict,
+)
 import inspect
 
 from macrokit.head import EXEC, Head
@@ -572,18 +583,6 @@ def _tuple(*args) -> tuple:
 _STORED_VALUES: Dict[int, Tuple[_Expr, Any]] = {}
 
 
-def store_tuple(obj: tuple[Any, ...]) -> Symbol:
-    """Store a tuple object and make its contents expressed as var00[i]."""
-    if not isinstance(obj, tuple):
-        raise TypeError(f"Expected tuple, got {type(obj)}.")
-    obj_sym = Symbol.asvar(obj)
-    for idx, each in enumerate(obj):
-        expr = Expr(Head.getitem, [obj_sym, idx])
-        _id = id(each)
-        _STORED_VALUES[_id] = (expr, each)
-    return obj_sym
-
-
 # Map to speed up type check
 _SUBCLASS_MAP: Dict[type, type] = {}
 
@@ -615,7 +614,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     obj_type = type(obj)
     obj_id = id(obj)
     _stored = False
-    if obj_id in _STORED_VALUES:
+    if constant and obj_id in _STORED_VALUES:
         seq: Union[str, _Expr] = _STORED_VALUES[obj_id][0]
         _stored = True
     elif not constant or obj_id in Symbol._variables:
@@ -676,6 +675,28 @@ def store(obj: Any) -> _Expr:
         raise ValueError(f"{name} is not an identifier.")
     _STORED_VALUES[obj_id] = (sym, obj)
     return sym
+
+
+def store_sequence(obj: Sequence[Any]) -> Symbol:
+    """Store a sequence object and make its contents expressed as varXX[i]."""
+    if not isinstance(obj, tuple):
+        raise TypeError(f"Expected tuple, got {type(obj)}.")
+    obj_sym = Symbol.asvar(obj)
+    for idx, each in enumerate(obj):
+        expr = Expr(Head.getitem, [obj_sym, idx])
+        _id = id(each)
+        _STORED_VALUES[_id] = (expr, each)
+    return obj_sym
+
+
+def object_stored_at(id: int) -> Any:
+    """Return the object stored at the given ID."""
+    return _STORED_VALUES[id][1]
+
+
+def symbol_stored_at(id: int) -> _Expr:
+    """Return the Symbol object stored at the given ID."""
+    return _STORED_VALUES[id][0]
 
 
 register_type(tuple, lambda e: Expr(Head.tuple, [symbol(a) for a in e]))

@@ -6,6 +6,7 @@ from typing import Any, Callable, Iterable, Iterator, overload, Union, List, Tup
 import inspect
 
 from macrokit.head import EXEC, Head
+from macrokit.type_map import _TYPE_MAP, register_type
 from macrokit._validator import validator
 from macrokit._symbol import Symbol
 
@@ -583,6 +584,10 @@ def store_tuple(obj: tuple[Any, ...]) -> Symbol:
     return obj_sym
 
 
+# Map to speed up type check
+_SUBCLASS_MAP: Dict[type, type] = {}
+
+
 def symbol(obj: Any, constant: bool = True) -> _Expr:
     """
     Make a proper Symbol or Expr instance from any objects.
@@ -616,22 +621,22 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     elif not constant or obj_id in Symbol._variables:
         seq = Symbol.make_symbol_str(obj)
         constant = False
-    elif obj_type in Symbol._type_map:
-        seq = Symbol._type_map[obj_type](obj)
+    elif obj_type in _TYPE_MAP:
+        seq = _TYPE_MAP[obj_type](obj)
         _stored = True
-    elif obj_type in Symbol._subclass_map:
-        parent_type = Symbol._subclass_map[obj_type]
-        seq = Symbol._type_map[parent_type](obj)
+    elif obj_type in _SUBCLASS_MAP:
+        parent_type = _SUBCLASS_MAP[obj_type]
+        seq = _TYPE_MAP[parent_type](obj)
         _stored = True
     elif isinstance(obj, Number):  # numpy scalars
-        Symbol._type_map[obj_type] = str
+        _TYPE_MAP[obj_type] = str
         seq = str(obj)
     else:
         # search for subclasses
-        for k, func in Symbol._type_map.items():
+        for k, func in _TYPE_MAP.items():
             if isinstance(obj, k):
                 seq = func(obj)
-                Symbol._subclass_map[obj_type] = k
+                _SUBCLASS_MAP[obj_type] = k
                 break
         else:
             seq = Symbol.make_symbol_str(obj)
@@ -651,7 +656,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         return sym
 
     if isinstance(seq, (Symbol, Expr)):
-        # The output of register_type can be a Symbol or Expr
+        # The outregister_type can be a Symbol or Expr
         return seq
     else:
         sym = Symbol(seq, obj_id)
@@ -672,11 +677,11 @@ def store(obj: Any) -> _Expr:
     return sym
 
 
-Symbol.register_type(tuple, lambda e: Expr(Head.tuple, [symbol(a) for a in e]))
-Symbol.register_type(list, lambda e: Expr(Head.list, [symbol(a) for a in e]))
+register_type(tuple, lambda e: Expr(Head.tuple, [symbol(a) for a in e]))
+register_type(list, lambda e: Expr(Head.list, [symbol(a) for a in e]))
 
 
-@Symbol.register_type(frozenset)
+@register_type(frozenset)
 def _fronset_expr(e: frozenset):
     if len(e) == 0:
         return Expr(Head.call, [frozenset])
@@ -684,7 +689,7 @@ def _fronset_expr(e: frozenset):
         return Expr(Head.call, [frozenset, set(e)])
 
 
-@Symbol.register_type(set)
+@register_type(set)
 def _set_expr(e: set):
     if len(e) == 0:
         return Expr(Head.call, [set])
@@ -692,7 +697,7 @@ def _set_expr(e: set):
         return Expr(Head.braces, [symbol(a) for a in e])
 
 
-@Symbol.register_type(dict)
+@register_type(dict)
 def _dict_expr(e: dict):
     return Expr(
         Head.braces,
@@ -700,10 +705,10 @@ def _dict_expr(e: dict):
     )
 
 
-Symbol.register_type(memoryview, lambda e: Expr(Head.call, [memoryview, e.tobytes()]))
-Symbol.register_type(bytearray, lambda e: Expr(Head.call, [bytearray, bytes(e)]))
-Symbol.register_type(slice, lambda e: Expr(Head.call, [slice, e.start, e.stop, e.step]))
-Symbol.register_type(range, lambda e: Expr(Head.call, [range, e.start, e.stop, e.step]))
+register_type(memoryview, lambda e: Expr(Head.call, [memoryview, e.tobytes()]))
+register_type(bytearray, lambda e: Expr(Head.call, [bytearray, bytes(e)]))
+register_type(slice, lambda e: Expr(Head.call, [slice, e.start, e.stop, e.step]))
+register_type(range, lambda e: Expr(Head.call, [range, e.start, e.stop, e.step]))
 
 # install builtin variables
 for name, obj in builtins.__dict__.items():

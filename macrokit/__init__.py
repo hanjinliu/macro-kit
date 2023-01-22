@@ -4,11 +4,12 @@ __version__ = "0.3.10"
 __author__ = "Hanjin Liu"
 __email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 
-from macrokit._symbol import Symbol, register_type, unregister_type, type_registered
+from macrokit._symbol import Symbol
 from macrokit.expression import Expr, Head, symbol, store_tuple, store
 from macrokit.macro import Macro, MacroFlags
 from macrokit.mock import Mock
 from macrokit.ast import parse
+from macrokit.type_map import register_type, unregister_type, type_registered
 from functools import wraps
 
 from macrokit._symbol import COMPILED

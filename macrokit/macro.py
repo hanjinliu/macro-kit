@@ -22,6 +22,7 @@ from typing_extensions import TypedDict
 
 from macrokit.ast import parse
 from macrokit.expression import EXEC, Expr, Head, symbol
+from macrokit.type_map import register_type
 from macrokit._symbol import Symbol
 
 _NON_RECORDABLE = (
@@ -462,7 +463,7 @@ def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
             update_namespace(attr, new)
 
 
-@Symbol.register_type(lambda o: symbol(o.obj))  # type: ignore
+@register_type(lambda o: symbol(o.obj))  # type: ignore
 class mObject:
     """Abstract class for macro recorder equipped objects."""
 

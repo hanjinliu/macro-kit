@@ -3,13 +3,13 @@ from napari.layers import Image
 from magicgui import magicgui
 from magicgui.widgets import PushButton, Container
 from scipy import ndimage as ndi
-from macrokit import Macro, Symbol
+from macrokit import Macro, register_type
 
 # Create macro instance
 macro = Macro()
 
 # Register Image layer type to tell Symbol how to display it in macro.
-Symbol.register_type(Image, lambda layer: f"viewer.layers['{layer.name}']")
+register_type(Image, lambda layer: f"viewer.layers['{layer.name}']")
 
 # ... or if you are used to Expr, then this code will be the better solution.
 #
@@ -21,7 +21,7 @@ Symbol.register_type(Image, lambda layer: f"viewer.layers['{layer.name}']")
 #                             layer.name])
 #     return expr
 #
-# Symbol.register_type(Image, layer_expr)
+# register_type(Image, layer_expr)
 
 viewer = napari.Viewer()
 

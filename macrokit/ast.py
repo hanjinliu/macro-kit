@@ -3,7 +3,7 @@ import inspect
 import sys
 from typing import Callable, Dict, Union, List, get_type_hints
 
-from macrokit.expression import Expr, Head, symbol
+from macrokit.expression import Expr, Head, symbol, _STORED_VALUES
 from macrokit._symbol import Symbol
 
 NoneType = type(None)
@@ -128,8 +128,8 @@ else:
 @from_ast.register
 def _name(ast_object: ast.Name):
     name = ast_object.id
-    for sym, v in Symbol._stored_values.values():
-        if sym.name == name:
+    for sym, v in _STORED_VALUES.values():
+        if isinstance(sym, Symbol) and sym.name == name:
             return symbol(v)
     return Symbol(ast_object.id)
 
@@ -166,10 +166,8 @@ def _call(ast_object: ast.Call):
 @from_ast.register
 def _assign(ast_object: ast.Assign):
     head = Head.assign
-    if len(ast_object.targets) != 1:
-        target = tuple(from_ast(x) for x in ast_object.targets)
-    else:
-        target = from_ast(ast_object.targets[0])
+    target0 = ast_object.targets[0]
+    target = from_ast(target0)
     args = [target, from_ast(ast_object.value)]
     return Expr(head, args)
 

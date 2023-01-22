@@ -1,6 +1,7 @@
+import builtins
 from copy import deepcopy
 from numbers import Number
-from types import ModuleType
+from types import FunctionType, ModuleType
 from typing import Any, Callable, Iterable, Iterator, overload, Union, List, Tuple, Dict
 import inspect
 
@@ -45,11 +46,23 @@ def _comma(a, b):
     return f"{a}, {b}".rstrip(", ")
 
 
+def _tuple_str(x: "Expr", i: int):
+    args = x.args
+    if len(args) == 1:
+        return f"{_s_(i)}({str_(args[0])},)"
+    else:
+        tup = ", ".join(str_(arg) for arg in args)
+        return f"{_s_(i)}({tup})"
+
+
 _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
     Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{str_(e.args[1])}]",
     Head.del_: lambda e, i: f"{_s_(i)}del {str_(e.args[0])}",
+    Head.tuple: _tuple_str,
+    Head.list: lambda e, i: f"{_s_(i)}[{', '.join(str_(arg) for arg in e.args)}]",
+    Head.braces: lambda e, i: f"{_s_(i)}{{{', '.join(str_(arg) for arg in e.args)}}}",
     Head.call: lambda e, i: f"{str_(e.args[0], i)}({sjoin(', ', e.args[1:])})",
     Head.assign: lambda e, i: f"{str_(e.args[0], i)} = {e.args[1]}",
     Head.kw: lambda e, i: f"{str_(e.args[0])}={str_(e.args[1])}",
@@ -179,9 +192,11 @@ class Expr:
         }
 
         # use registered modules
-        if Symbol._stored_values:
+        if _STORED_VALUES:
             format_dict: Dict[Symbol, _Expr] = {}
-            for id_, (sym, obj) in Symbol._stored_values.items():
+            for id_, (sym, obj) in _STORED_VALUES.items():
+                if isinstance(sym, Expr):
+                    continue
                 vstr = Symbol.symbol_str_for_id(id_)
                 format_dict[sym] = Symbol(vstr)
                 _glb[vstr] = obj
@@ -551,7 +566,9 @@ def _tuple(*args) -> tuple:
     return args
 
 
-_ID_TO_TUPLE_EXPR: Dict[int, Expr] = {}
+# Stored symbols and the actual values. These will be used even after parse()
+# method, to make parse(str(macro)) executable.
+_STORED_VALUES: Dict[int, Tuple[_Expr, Any]] = {}
 
 
 def store_tuple(obj: tuple[Any, ...]) -> Symbol:
@@ -562,8 +579,7 @@ def store_tuple(obj: tuple[Any, ...]) -> Symbol:
     for idx, each in enumerate(obj):
         expr = Expr(Head.getitem, [obj_sym, idx])
         _id = id(each)
-        _ID_TO_TUPLE_EXPR[_id] = expr
-        Symbol._variables.add(_id)
+        _STORED_VALUES[_id] = (expr, each)
     return obj_sym
 
 
@@ -593,54 +609,35 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
 
     obj_type = type(obj)
     obj_id = id(obj)
-    if not constant or obj_id in Symbol._variables:
-        if obj_id in _ID_TO_TUPLE_EXPR:
-            seq: Union[str, _Expr] = _ID_TO_TUPLE_EXPR[obj_id]
-        else:
-            seq = Symbol.make_symbol_str(obj)
+    _stored = False
+    if obj_id in _STORED_VALUES:
+        seq: Union[str, _Expr] = _STORED_VALUES[obj_id][0]
+        _stored = True
+    elif not constant or obj_id in Symbol._variables:
+        seq = Symbol.make_symbol_str(obj)
         constant = False
-    elif obj_id in Symbol._stored_values:
-        seq = Symbol._stored_values[obj_id][0]
     elif obj_type in Symbol._type_map:
         seq = Symbol._type_map[obj_type](obj)
+        _stored = True
     elif obj_type in Symbol._subclass_map:
         parent_type = Symbol._subclass_map[obj_type]
         seq = Symbol._type_map[parent_type](obj)
-    elif isinstance(obj, tuple):
-        if len(obj) == 1:
-            # length 1 tuple have to be written as (a,) instead of (a).
-            seq = f"({symbol(obj[0])},)"
-        else:
-            seq = "(" + ", ".join(str(symbol(a)) for a in obj) + ")"
-        if obj_type is not tuple:
-            seq = obj_type.__name__ + seq
-    elif isinstance(obj, list):
-        seq = "[" + ", ".join(str(symbol(a)) for a in obj) + "]"
-        if obj_type is not list:
-            seq = f"{obj_type.__name__}({seq})"
-    elif isinstance(obj, dict):
-        seq = "{" + ", ".join(f"{symbol(k)}: {symbol(v)}" for k, v in obj.items()) + "}"
-        if obj_type is not dict:
-            seq = f"{obj_type.__name__}({seq})"
-    elif isinstance(obj, set):
-        if len(obj) == 0:
-            if obj_type is set:
-                seq = "set()"
-            else:
-                seq = f"{obj_type.__name__}()"
-        else:
-            seq = "{" + ", ".join(str(symbol(a)) for a in obj) + "}"
-            if obj_type is not set:
-                seq = f"{obj_type.__name__}({seq})"
-    elif isinstance(obj, frozenset):
-        seq = ", ".join(str(symbol(a)) for a in obj)
-        if obj_type is frozenset:
-            seq = f"frozenset({{{seq}}})"
-        else:
-            seq = f"{obj_type.__name__}({{{seq}}})"
-    elif isinstance(obj, Number):  # int, float, bool, ...
+        _stored = True
+    elif isinstance(obj, Number):  # numpy scalars
+        Symbol._type_map[obj_type] = str
         seq = str(obj)
-    elif isinstance(obj, ModuleType):
+    else:
+        # search for subclasses
+        for k, func in Symbol._type_map.items():
+            if isinstance(obj, k):
+                seq = func(obj)
+                Symbol._subclass_map[obj_type] = k
+                break
+        else:
+            seq = Symbol.make_symbol_str(obj)
+            constant = False
+
+    if isinstance(obj, (ModuleType, FunctionType)) and not _stored:
         # Register module to the default namespace of Symbol class. This function is
         # called every time a module type object is converted to a Symbol because users
         # always have to pass the module object to the global variables when calling
@@ -650,19 +647,8 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         sym.constant = True
         if len(main) == 0:
             # submodules should not be registered
-            Symbol._stored_values[obj_id] = (sym, obj)
+            _STORED_VALUES[obj_id] = (sym, obj)
         return sym
-    elif hasattr(obj, "__name__"):
-        seq = obj.__name__
-    else:
-        for k, func in Symbol._type_map.items():
-            if isinstance(obj, k):
-                seq = func(obj)
-                Symbol._subclass_map[obj_type] = k
-                break
-        else:
-            seq = Symbol.make_symbol_str(obj)
-            constant = False
 
     if isinstance(seq, (Symbol, Expr)):
         # The output of register_type can be a Symbol or Expr
@@ -682,5 +668,45 @@ def store(obj: Any) -> _Expr:
     name = sym.name
     if not name.isidentifier():
         raise ValueError(f"{name} is not an identifier.")
-    Symbol._stored_values[obj_id] = (sym, obj)
+    _STORED_VALUES[obj_id] = (sym, obj)
     return sym
+
+
+Symbol.register_type(tuple, lambda e: Expr(Head.tuple, [symbol(a) for a in e]))
+Symbol.register_type(list, lambda e: Expr(Head.list, [symbol(a) for a in e]))
+
+
+@Symbol.register_type(frozenset)
+def _fronset_expr(e: frozenset):
+    if len(e) == 0:
+        return Expr(Head.call, [frozenset])
+    else:
+        return Expr(Head.call, [frozenset, set(e)])
+
+
+@Symbol.register_type(set)
+def _set_expr(e: set):
+    if len(e) == 0:
+        return Expr(Head.call, [set])
+    else:
+        return Expr(Head.braces, [symbol(a) for a in e])
+
+
+@Symbol.register_type(dict)
+def _dict_expr(e: dict):
+    return Expr(
+        Head.braces,
+        [Expr(Head.annotate, [symbol(k), symbol(v)]) for k, v in e.items()],
+    )
+
+
+Symbol.register_type(memoryview, lambda e: Expr(Head.call, [memoryview, e.tobytes()]))
+Symbol.register_type(bytearray, lambda e: Expr(Head.call, [bytearray, bytes(e)]))
+Symbol.register_type(slice, lambda e: Expr(Head.call, [slice, e.start, e.stop, e.step]))
+Symbol.register_type(range, lambda e: Expr(Head.call, [range, e.start, e.stop, e.step]))
+
+# install builtin variables
+for name, obj in builtins.__dict__.items():
+    if name.startswith("_") or isinstance(obj, ModuleType):
+        continue
+    _STORED_VALUES[id(obj)] = (symbol(obj), obj)

@@ -18,7 +18,7 @@ from macrokit import symbol, Symbol
         ({"a": [1, 2], "b": [0.1, 0.2]}, "{'a': [1, 2], 'b': [0.1, 0.2]}"),
         (set(), "set()"),
         ({1, 2, 3}, "{1, 2, 3}"),
-        (frozenset(), "frozenset({})"),
+        (frozenset(), "frozenset()"),
         (frozenset([1, 2]), "frozenset({1, 2})"),
     ]
 )

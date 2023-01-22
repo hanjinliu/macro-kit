@@ -7,7 +7,6 @@ from typing import (
     Dict,
     Mapping,
     Set,
-    Tuple,
     Type,
     TypeVar,
     overload,
@@ -32,10 +31,6 @@ class Symbol:
         type(NotImplemented): lambda e: "NotImplemented",
         str: repr,
         bytes: repr,
-        bytearray: repr,
-        memoryview: lambda e: repr(e.tobytes()),
-        range: lambda e: f"range({e.start}, {e.stop}, {e.step})",
-        slice: lambda e: f"slice({e.start}, {e.stop}, {e.step})",
         int: str,
         float: str,
         complex: str,
@@ -47,10 +42,6 @@ class Symbol:
 
     # ID of global variables
     _variables: Set[int] = set()
-
-    # Stored symbols and the actual values. These will be used even after parse()
-    # method, to make parse(str(macro)) executable.
-    _stored_values: Dict[int, Tuple["Symbol", Any]] = {}
 
     def __init__(self, seq: Any, object_id: int = None):
         self._name = str(seq)
@@ -88,7 +79,9 @@ class Symbol:
         _globals = {str(k): v for k, v in _globals.items()}
         _locals = _locals.copy()
         if not _globals:
-            out = Symbol._stored_values.get(self.object_id, None)
+            from .expression import _STORED_VALUES
+
+            out = _STORED_VALUES.get(self.object_id, None)
             if out is not None:
                 _globals[self.name] = out[1]
         out = eval(self.name, _globals, _locals)

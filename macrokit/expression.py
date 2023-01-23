@@ -679,7 +679,7 @@ def store(obj: Any) -> _Expr:
 
 def store_sequence(obj: Sequence[Any]) -> Symbol:
     """Store a sequence object and make its contents expressed as varXX[i]."""
-    if not isinstance(obj, tuple):
+    if not isinstance(obj, Sequence):
         raise TypeError(f"Expected tuple, got {type(obj)}.")
     obj_sym = Symbol.asvar(obj)
     for idx, each in enumerate(obj):

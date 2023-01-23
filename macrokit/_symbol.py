@@ -136,7 +136,9 @@ class Symbol:
     @classmethod
     def asvar(cls, obj: Any) -> "Symbol":
         """Convert input object as a variable."""
-        return Symbol(Symbol.make_symbol_str(obj))
+        out = Symbol(Symbol.make_symbol_str(obj), id(obj))
+        out.constant = False
+        return out
 
 
 try:

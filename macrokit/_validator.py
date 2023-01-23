@@ -70,6 +70,7 @@ def _single_str(args):
 @validator.register(Head.assert_)
 @validator.register(Head.getitem)
 @validator.register(Head.unop)
+@validator.register(Head.annotate)
 def _two_args(args):
     if len(args) != 2:
         raise ValidationError()
@@ -86,10 +87,23 @@ def _getattr(args):
     return args
 
 
-@validator.register(Head.assign)
 @validator.register(Head.kw)
-@validator.register(Head.annotate)
 def _symbol_and_any(args):
+    if len(args) != 2:
+        raise ValidationError()
+    k, v = args
+    if isinstance(k, str):
+        k = Symbol.var(k)
+    elif isinstance(k, Symbol):
+        if not k.constant:
+            raise ValidationError()
+        k = Symbol.var(k.name)
+    # here, annotated function call will be a list.
+    return [k, v]
+
+
+@validator.register(Head.assign)
+def _symbols_and_any(args):
     if len(args) != 2:
         raise ValidationError()
     k, v = args

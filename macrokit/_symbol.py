@@ -1,56 +1,14 @@
-from contextlib import contextmanager
 import inspect
-from types import BuiltinFunctionType, FunctionType, MethodType
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Mapping,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    overload,
-    Optional,
-)
+from typing import Any, Dict, Set
 
-T = TypeVar("T")
 _OFFSET = None
 
 
 class Symbol:
     """A class that represents Python symbol in the context of metaprogramming."""
 
-    # Map of how to convert object into a symbol.
-    _type_map: Dict[type, Callable[[Any], str]] = {
-        type: lambda e: e.__name__,
-        FunctionType: lambda e: e.__name__,
-        BuiltinFunctionType: lambda e: e.__name__,
-        MethodType: lambda e: e.__name__,
-        type(None): lambda e: "None",
-        type(...): lambda e: "...",
-        type(NotImplemented): lambda e: "NotImplemented",
-        str: repr,
-        bytes: repr,
-        bytearray: repr,
-        memoryview: lambda e: repr(e.tobytes()),
-        range: lambda e: f"range({e.start}, {e.stop}, {e.step})",
-        slice: lambda e: f"slice({e.start}, {e.stop}, {e.step})",
-        int: str,
-        float: str,
-        complex: str,
-        bool: str,
-    }
-
-    # Map to speed up type check
-    _subclass_map: Dict[type, type] = {}
-
     # ID of global variables
     _variables: Set[int] = set()
-
-    # Stored symbols and the actual values. These will be used even after parse()
-    # method, to make parse(str(macro)) executable.
-    _stored_values: Dict[int, Tuple["Symbol", Any]] = {}
 
     def __init__(self, seq: Any, object_id: int = None):
         self._name = str(seq)
@@ -88,7 +46,9 @@ class Symbol:
         _globals = {str(k): v for k, v in _globals.items()}
         _locals = _locals.copy()
         if not _globals:
-            out = Symbol._stored_values.get(self.object_id, None)
+            from .expression import _STORED_VALUES
+
+            out = _STORED_VALUES.get(self.object_id, None)
             if out is not None:
                 _globals[self.name] = out[1]
         out = eval(self.name, _globals, _locals)
@@ -176,94 +136,10 @@ class Symbol:
     @classmethod
     def asvar(cls, obj: Any) -> "Symbol":
         """Convert input object as a variable."""
-        return Symbol(Symbol.make_symbol_str(obj))
+        out = Symbol(Symbol.make_symbol_str(obj), id(obj))
+        out.constant = False
+        return out
 
-    @overload
-    @classmethod
-    def register_type(
-        cls, type: Type[T], function: Optional[Callable[[T], Any]]
-    ) -> None:
-        ...
-
-    @overload
-    @classmethod
-    def register_type(
-        cls, type: Type[T]
-    ) -> Callable[[Callable[[T], Any]], Callable[[T], Any]]:
-        ...
-
-    @overload
-    @classmethod
-    def register_type(cls, func: Callable[[T], Any]) -> Callable[[Type[T]], Type[T]]:
-        ...
-
-    @classmethod
-    def register_type(cls, type_or_function, function=None):
-        """
-        Define a dispatcher for macro recording.
-
-        >>> register_type(np.ndarray, lambda arr: str(arr.tolist()))
-
-        or
-
-        >>> @register_type(np.ndarray)
-        >>> def _(arr):
-        ...     return str(arr.tolist())
-
-        or if you defined a new type
-
-        >>> @register_type(lambda t: t.name)
-        >>> class T:
-        ...     ...
-
-        """
-        if isinstance(type_or_function, type):
-
-            def _register_function(func: Callable[[T], Any]):
-                if not callable(func):
-                    raise TypeError("The second argument must be callable.")
-                cls._type_map[type_or_function] = func
-                return func
-
-            return (
-                _register_function if function is None else _register_function(function)
-            )
-
-        else:
-            if function is not None or not callable(type_or_function):
-                raise TypeError(
-                    "'register_type' must take type or function as arguments."
-                )
-
-            def _register_type(type_: Type[T]) -> Type[T]:
-                if not isinstance(type_, type):
-                    raise TypeError(f"Type expected, got {type(type_)}")
-                cls._type_map[type_] = type_or_function
-                return type_
-
-            return _register_type
-
-    @classmethod
-    def unregister_type(cls, type_: Type[T], raises: bool = True) -> None:
-        """Unregister a type."""
-        if cls._type_map.pop(type_, None) is None and raises:
-            raise KeyError(f"{type_} is not registered.")
-
-    @contextmanager
-    @classmethod
-    def type_registered(cls, typemap: Mapping[Type[T], Callable[[T], Any]]):
-        """Register types in a dictionary."""
-        _old_type_map = cls._type_map.copy()
-        cls._type_map.update(typemap)
-        try:
-            yield
-        finally:
-            cls._type_map = _old_type_map
-
-
-register_type = Symbol.register_type
-unregister_type = Symbol.unregister_type
-type_registered = Symbol.type_registered
 
 try:
     import cython

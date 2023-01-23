@@ -22,6 +22,7 @@ from typing_extensions import TypedDict
 
 from macrokit.ast import parse
 from macrokit.expression import EXEC, Expr, Head, symbol
+from macrokit.type_map import register_type
 from macrokit._symbol import Symbol
 
 _NON_RECORDABLE = (
@@ -112,44 +113,38 @@ class MacroFlagOptions(TypedDict, total=False):
 # classes
 
 
-class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
+class BaseMacro(Expr, MutableSequence[Union[Symbol, Expr]]):
     """
     A special form of an expression with header "block".
 
     This class behaves in a list-like way and specifically useful for macro recording.
     """
 
-    _FLAG_MAP = {
-        "__getitem__": "Get",
-        "__getattr__": "Get",
-        "__setitem__": "Set",
-        "__setattr__": "Set",
-        "__delitem__": "Delete",
-        "__delattr__": "Delete",
-    }
-
-    def __init__(self, args: Iterable[Expr] = (), *, flags: MacroFlagOptions = {}):
+    def __init__(self, args: Iterable[Expr] = ()):
         super().__init__(head=Head.block, args=args)
         self.active = True
-        self._callbacks: list[Callable[[Symbol | Expr], Any]] = []
-        if isinstance(flags, MacroFlags):
-            flags = flags._asdict()
-        self._flags = MacroFlags(**flags)
+        self._on_appended: list[Callable[[Symbol | Expr], Any]] = []
+        self._on_popped: list[Callable[[Symbol | Expr], Any]] = []
         self._last_setval: Expr | None = None
 
     @property
     def callbacks(self):
         """Callback functions when a new macro is recorded."""
-        return self._callbacks
+        return self._on_appended
 
     @property
-    def flags(self):
-        """Flags that determine what kind of expression will be recorded."""
-        return self._flags
+    def on_appended(self):
+        """Callback functions when a new line is appended."""
+        return self._on_appended
+
+    @property
+    def on_popped(self):
+        """Callback functions when the last line is removed."""
+        return self._on_popped
 
     def insert(self, key: int, expr: Symbol | Expr | str):
         """
-        Insert expressiong to macro.
+        Insert expression to macro.
 
         Parameters
         ----------
@@ -166,15 +161,41 @@ class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
             raise TypeError("Cannot insert objects to Macro except for Expr objects.")
 
         self.args.insert(key, expr_)
-        for callback in self._callbacks:
-            callback(expr_)
+
+    def append(self, expr: Symbol | Expr | str):
+        """
+        Append expression to macro.
+
+        Parameters
+        ----------
+        expr : Expr
+            Expression. If a string is given, it will be parsed to Expr object.
+        """
+        if isinstance(expr, str):
+            expr_ = parse(expr)
+        elif isinstance(expr, (Symbol, Expr)):
+            expr_ = expr
+        else:
+            raise TypeError("Cannot insert objects to Macro except for Expr objects.")
+
+        super().append(expr_)
+        for cb in self._on_appended:
+            cb(expr_)
+        return None
+
+    def pop(self, index: int = -1) -> Union[Symbol, Expr]:
+        """Pop expression from macro."""
+        expr = super().pop(index)
+        for cb in self._on_popped:
+            cb(expr)
+        return expr
 
     @overload
     def __getitem__(self, key: int | str) -> Expr:  # noqa
         ...
 
     @overload
-    def __getitem__(self, key: slice) -> Macro:  # noqa
+    def __getitem__(self, key: slice) -> BaseMacro:  # noqa
         ...
 
     def __getitem__(self, key):
@@ -182,7 +203,7 @@ class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
         if isinstance(key, int):
             return self._args[key]
         elif isinstance(key, slice):
-            return type(self)(self._args[key], flags=self._flags)
+            return type(self)(self._args[key])
         raise TypeError(
             f"{type(self).__name__} indices must intergers or slices, "
             f"not {type(key).__name__}"
@@ -221,6 +242,81 @@ class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
             yield
         finally:
             self.active = was_active
+
+    def optimize(self, inplace=False) -> BaseMacro:
+        """
+        Optimize macro readability by deleting unused variables.
+
+        Parameters
+        ----------
+        inplace : bool, default is False
+            If true, macro will be updated by the optimized one.
+
+        Returns
+        -------
+        Macro
+            Optimized macro.
+        """
+        if not inplace:
+            self = deepcopy(self)
+        expr_map: list[tuple[Symbol | Expr, int]] = []
+        need = set()
+        for i, expr in enumerate(self):
+            if isinstance(expr, Symbol):
+                continue
+            if expr.head == Head.assign:
+                # TODO: a, b = func(...) don't work
+                expr_map.append((expr.args[0], i))
+                args = expr.args[1:]
+            else:
+                args = expr.args
+
+            for arg in args:
+                if isinstance(arg, Expr):
+                    need |= {a for a in arg.iter_args() if (not a.constant)}
+                elif not arg.constant:
+                    need.add(arg)
+
+        for sym, i in expr_map:
+            if sym not in need:
+                self[i] = self[i].args[1]
+
+        return self
+
+
+class Macro(BaseMacro):
+    """Macro with recording methods."""
+
+    _FLAG_MAP = {
+        "__getitem__": "Get",
+        "__getattr__": "Get",
+        "__setitem__": "Set",
+        "__setattr__": "Set",
+        "__delitem__": "Delete",
+        "__delattr__": "Delete",
+    }
+
+    def __init__(self, args: Iterable[Expr] = (), *, flags: MacroFlagOptions = {}):
+        super().__init__(args)
+        if isinstance(flags, MacroFlags):
+            flags = flags._asdict()
+        self._flags = MacroFlags(**flags)
+
+    @property
+    def flags(self):
+        """Flags that determine what kind of expression will be recorded."""
+        return self._flags
+
+    def __getitem__(self, key):
+        """Get child expressions."""
+        if isinstance(key, int):
+            return self._args[key]
+        elif isinstance(key, slice):
+            return type(self)(self._args[key], flags=self._flags)
+        raise TypeError(
+            f"{type(self).__name__} indices must intergers or slices, "
+            f"not {type(key).__name__}"
+        )
 
     @overload
     def record(
@@ -364,45 +460,20 @@ class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
         """
         return self.record(classmethod(method))
 
-    def optimize(self, inplace=False) -> Macro:
-        """
-        Optimize macro readability by deleting unused variables.
+    bound: dict[int, Macro] = {}
 
-        Parameters
-        ----------
-        inplace : bool, default is False
-            If true, macro will be updated by the optimized one.
-
-        Returns
-        -------
-        Macro
-            Optimized macro.
-        """
-        if not inplace:
-            self = deepcopy(self)
-        expr_map: list[tuple[Symbol | Expr, int]] = []
-        need = set()
-        for i, expr in enumerate(self):
-            if isinstance(expr, Symbol):
-                continue
-            if expr.head == Head.assign:
-                # TODO: a, b = func(...) don't work
-                expr_map.append((expr.args[0], i))
-                args = expr.args[1:]
-            else:
-                args = expr.args
-
-            for arg in args:
-                if isinstance(arg, Expr):
-                    need |= {a for a in arg.iter_args() if (not a.constant)}
-                elif not arg.constant:
-                    need.add(arg)
-
-        for sym, i in expr_map:
-            if sym not in need:
-                self[i] = self[i].args[1]
-
-        return self
+    def __get__(self, obj: Any, type=None):
+        """Useful when macro is used as a field in a class."""
+        if obj is None:
+            return self
+        obj_id = id(obj)
+        cls = self.__class__
+        try:
+            macro = cls.bound[obj_id]
+        except KeyError:
+            macro = cls(flags=self.flags)
+            cls.bound[obj_id] = macro
+        return macro
 
     def call_function(self, func: Callable, *args, **kwargs):
         """
@@ -422,21 +493,6 @@ class Macro(Expr, MutableSequence[Union[Symbol, Expr]]):
             self.append(expr)
             self._last_setval = None
         return out
-
-    bound: dict[int, Macro] = {}
-
-    def __get__(self, obj: Any, type=None):
-        """Useful when macro is used as a field in a class."""
-        if obj is None:
-            return self
-        obj_id = id(obj)
-        cls = self.__class__
-        try:
-            macro = cls.bound[obj_id]
-        except KeyError:
-            macro = cls(flags=self.flags)
-            cls.bound[obj_id] = macro
-        return macro
 
 
 class MacroMixin:
@@ -462,7 +518,7 @@ def update_namespace(obj: MacroMixin, namespace: Symbol | Expr) -> None:
             update_namespace(attr, new)
 
 
-@Symbol.register_type(lambda o: symbol(o.obj))  # type: ignore
+@register_type(lambda o: symbol(o.obj))  # type: ignore
 class mObject:
     """Abstract class for macro recorder equipped objects."""
 

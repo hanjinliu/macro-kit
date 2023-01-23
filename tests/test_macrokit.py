@@ -1,6 +1,7 @@
 import pytest
 from macrokit import (
-    Expr, Macro, Symbol, parse, register_type, unregister_type, symbol, store
+    Expr, Macro, Symbol, parse, register_type, unregister_type, symbol,
+    store, store_sequence
 )
 
 
@@ -419,3 +420,15 @@ def test_store():
     _fn_x_expr = Expr.parse_call(_fn, (x,))
     out = _fn_x_expr.eval()
     assert out == x + 1
+
+
+def test_store_sequence():
+    class X:
+        pass
+
+    tup = (X(), X(), X())
+    store_sequence(tup)
+    sym = symbol(tup)
+    assert str(symbol(tup[0])) == f"{sym}[0]"
+    assert str(symbol(tup[1])) == f"{sym}[1]"
+    assert str(symbol(tup[2])) == f"{sym}[2]"

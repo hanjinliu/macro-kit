@@ -7,13 +7,14 @@ from macrokit.expression import Expr
 from macrokit.head import Head
 from macrokit.macro import BINOP_MAP, UNOP_MAP
 from macrokit._symbol import Symbol
+from macrokit.type_map import register_type
 
 
 def _mock_to_expr(mock: Mock):
     return mock.expr
 
 
-@Symbol.register_type(_mock_to_expr)
+@register_type(_mock_to_expr)
 class Mock:
     """
     Helper class for easier Expr object handling.

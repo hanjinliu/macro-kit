@@ -205,6 +205,7 @@ for i in a:
 t = 0
 while t < 3:
     t = t + 1
+del t
 """
 
 code2 = """

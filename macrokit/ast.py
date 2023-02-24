@@ -6,6 +6,7 @@ from typing import Callable, Dict, Union, List, get_type_hints
 from macrokit.expression import Expr, Head, symbol, _STORED_VALUES
 from macrokit._symbol import Symbol
 
+
 NoneType = type(None)
 LAMBDA = Symbol._reserved("<lambda>")
 
@@ -60,24 +61,26 @@ def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Sym
     return out
 
 
-def singledispatch(default_func: Callable):
-    """Simple version of functools.singledispatch."""
-    _registry: Dict[type, Callable] = {}
+class singledispatch:
+    """Simplified version of functools.singledispatch."""
 
-    def register(func: Callable):
-        cls = next(iter(get_type_hints(func).values()))
-        _registry[cls] = func
-        return func
+    def __init__(self, func: Callable):
+        self.func = func
+        self._registry: Dict[type, Callable] = {}
 
-    def wrapper(*args, **kwargs):
+    def __call__(self, *args, **kwargs):
+        """Dispatch to the registered function for the type of the first argument."""
         try:
-            f = _registry[args[0].__class__]
+            f = self._registry[args[0].__class__]
         except KeyError:
-            f = default_func
+            f = self.func
         return f(*args, **kwargs)
 
-    wrapper.register = register  # type: ignore
-    return wrapper
+    def register(self, func: Callable):
+        """Register function as a handler for a specific type."""
+        cls = next(iter(get_type_hints(func).values()))
+        self._registry[cls] = func
+        return func
 
 
 @singledispatch
@@ -367,6 +370,11 @@ def _raise(ast_object: ast.Raise):
     if ast_object.cause:
         raise ValueError("'raise XX from YY' is not supported yet")
     return Expr(Head.raise_, [from_ast(exc)])
+
+
+@from_ast.register
+def _del(ast_object: ast.Delete):
+    return Expr(Head.del_, [from_ast(ast_object.targets)])
 
 
 @from_ast.register

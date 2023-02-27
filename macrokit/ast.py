@@ -166,6 +166,19 @@ def _call(ast_object: ast.Call):
     return Expr(head, args)
 
 
+# @from_ast.register
+# def _joinedstr(ast_object: ast.JoinedStr):
+#     head = Head.jointstr
+#     args = [from_ast(k) for k in ast_object.values]
+#     return Expr(head, args)
+
+# @from_ast.register
+# def _formattedvalue(ast_object: ast.FormattedValue):
+#     head = Head.formattedvalue
+#     args = [from_ast(ast_object.value), ast_object.conversion, ast_object.format_spec]
+#     return Expr(head, args)
+
+
 @from_ast.register
 def _assign(ast_object: ast.Assign):
     head = Head.assign
@@ -382,6 +395,16 @@ def _return(ast_object: ast.Return):
     head = Head.return_
     args = [from_ast(ast_object.value)]
     return Expr(head, args)
+
+
+@from_ast.register
+def _yield(ast_object: ast.Yield):
+    return Expr(Head.yield_, [from_ast(ast_object.value)])
+
+
+@from_ast.register
+def _yield_from(ast_object: ast.YieldFrom):
+    return Expr(Head.yield_from, [from_ast(ast_object.value)])
 
 
 def _nest_binop(op, values: List[ast.expr]):

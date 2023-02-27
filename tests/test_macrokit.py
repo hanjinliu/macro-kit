@@ -214,6 +214,13 @@ def g(a: int = 4):
         raise TypeError("a must be an integer, got {type(a)}.")
     b: str = "a"
     return a
+
+def gen(x):
+    yield 0
+    yield x
+
+def gen2():
+    yield from gen(1)
 """
 
 code_operations = """

@@ -87,6 +87,8 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.function: lambda e, i: f"{_s_(i)}def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.lambda_: lambda e, i: f"{str_lmd(e.args[0], i)}: {str_(e.args[1])}",  # noqa
     Head.return_: lambda e, i: f"{_s_(i)}return {sjoin(', ', e.args)}",
+    Head.yield_: lambda e, i: f"{_s_(i)}yield {sjoin(', ', e.args)}",
+    Head.yield_from: lambda e, i: f"{_s_(i)}yield from {sjoin(', ', e.args)}",
     Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
     Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
     Head.elif_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa

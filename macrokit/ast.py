@@ -167,6 +167,12 @@ def _call(ast_object: ast.Call):
 
 
 @from_ast.register
+def _joinedstr(ast_object: ast.JoinedStr):
+    seq = "f'" + _nest_joinedstr(ast_object) + "'"
+    return Symbol(seq, id(seq))
+
+
+@from_ast.register
 def _assign(ast_object: ast.Assign):
     head = Head.assign
     target0 = ast_object.targets[0]
@@ -384,6 +390,16 @@ def _return(ast_object: ast.Return):
     return Expr(head, args)
 
 
+@from_ast.register
+def _yield(ast_object: ast.Yield):
+    return Expr(Head.yield_, [from_ast(ast_object.value)])
+
+
+@from_ast.register
+def _yield_from(ast_object: ast.YieldFrom):
+    return Expr(Head.yield_from, [from_ast(ast_object.value)])
+
+
 def _nest_binop(op, values: List[ast.expr]):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]
@@ -400,3 +416,33 @@ def _nest_compare(ops: List[ast.cmpop], values: List[ast.expr]):
             from_ast(values[0]),
             Expr(Head.binop, _nest_compare(ops[1:], values[1:])),
         ]
+
+
+def _nest_joinedstr(ast_object: ast.JoinedStr):
+    strs: list[str] = []
+    for k in ast_object.values:
+        if isinstance(k, ast.FormattedValue):
+            name = k.value
+            if not isinstance(name, ast.Name):
+                raise RuntimeError(f"Unknown name type: {type(name)}")
+            if k.format_spec is None:
+                if k.conversion == -1:
+                    strs.append("{" + f"{name.id}" + "}")
+                elif k.conversion == 115:
+                    strs.append("{" + f"{name.id}!s" + "}")
+                elif k.conversion == 114:
+                    strs.append("{" + f"{name.id}!r" + "}")
+                elif k.conversion == 97:
+                    strs.append("{" + f"{name.id}!a" + "}")
+                else:
+                    raise RuntimeError(f"Unknown conversion: {k.conversion}")
+            elif isinstance(k.format_spec, ast.JoinedStr):
+                fspec = _nest_joinedstr(k.format_spec)
+                strs.append("{" + f"{name.id}:{fspec}" + "}")
+            else:
+                raise RuntimeError(f"Unknown format_spec type: {type(k.format_spec)}")
+        elif isinstance(k, ast.Constant):
+            strs.append(k.value)
+        else:
+            raise RuntimeError(f"Unknown JoinedStr value type: {type(k)}")
+    return "".join(strs)

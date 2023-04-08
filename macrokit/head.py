@@ -23,6 +23,8 @@ class Head(Enum):
     function = "function"
     lambda_ = "lambda"
     return_ = "return"
+    yield_ = "yield"
+    yield_from = "yield_from"
     raise_ = "raise"
     if_ = "if"
     elif_ = "elif"

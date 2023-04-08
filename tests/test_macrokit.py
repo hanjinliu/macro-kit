@@ -330,7 +330,8 @@ def test_at():
 
 def test_split_getattr():
     expr = parse("a.b.c.d")
-    assert expr.split_getattr() == [Symbol(x) for x in "abcd"]
+    seqs = [x.name for x in expr.split_getattr()]
+    assert seqs == list("abcd")
 
 
 @pytest.mark.parametrize(
@@ -345,7 +346,8 @@ def test_split_getattr_errors(string: str):
 
 def test_split_getitem():
     expr = parse("a['b']['c']['d']")
-    assert expr.split_getitem() == [Symbol(x) for x in "abcd"]
+    seqs = [x.name for x in expr.split_getitem()]
+    assert seqs == ["a", "'b'", "'c'", "'d'"]
 
 
 def test_module_update():

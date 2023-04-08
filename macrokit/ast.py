@@ -166,17 +166,10 @@ def _call(ast_object: ast.Call):
     return Expr(head, args)
 
 
-# @from_ast.register
-# def _joinedstr(ast_object: ast.JoinedStr):
-#     head = Head.jointstr
-#     args = [from_ast(k) for k in ast_object.values]
-#     return Expr(head, args)
-
-# @from_ast.register
-# def _formattedvalue(ast_object: ast.FormattedValue):
-#     head = Head.formattedvalue
-#     args = [from_ast(ast_object.value), ast_object.conversion, ast_object.format_spec]
-#     return Expr(head, args)
+@from_ast.register
+def _joinedstr(ast_object: ast.JoinedStr):
+    seq = "f'" + _nest_joinedstr(ast_object) + "'"
+    return Symbol(seq, id(seq))
 
 
 @from_ast.register
@@ -423,3 +416,33 @@ def _nest_compare(ops: List[ast.cmpop], values: List[ast.expr]):
             from_ast(values[0]),
             Expr(Head.binop, _nest_compare(ops[1:], values[1:])),
         ]
+
+
+def _nest_joinedstr(ast_object: ast.JoinedStr):
+    strs: list[str] = []
+    for k in ast_object.values:
+        if isinstance(k, ast.FormattedValue):
+            name = k.value
+            if not isinstance(name, ast.Name):
+                raise RuntimeError(f"Unknown name type: {type(name)}")
+            if k.format_spec is None:
+                if k.conversion == -1:
+                    strs.append("{" + f"{name.id}" + "}")
+                elif k.conversion == 115:
+                    strs.append("{" + f"{name.id}!s" + "}")
+                elif k.conversion == 114:
+                    strs.append("{" + f"{name.id}!r" + "}")
+                elif k.conversion == 97:
+                    strs.append("{" + f"{name.id}!a" + "}")
+                else:
+                    raise RuntimeError(f"Unknown conversion: {k.conversion}")
+            elif isinstance(k.format_spec, ast.JoinedStr):
+                fspec = _nest_joinedstr(k.format_spec)
+                strs.append("{" + f"{name.id}:{fspec}" + "}")
+            else:
+                raise RuntimeError(f"Unknown format_spec type: {type(k.format_spec)}")
+        elif isinstance(k, ast.Constant):
+            strs.append(k.value)
+        else:
+            raise RuntimeError(f"Unknown JoinedStr value type: {type(k)}")
+    return "".join(strs)

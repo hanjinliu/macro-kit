@@ -223,45 +223,44 @@ def gen2():
     yield from gen(1)
 """
 
-code_operations = """
-a = 1
-b = a + 1
-c = a - 1
-arr = np.zeros((2, 2))
-a * b
-a / b
-a ** b
-a % b
-a // b
-a == b
-a != b
-a > b
-a >= b
-a < b
-a <= b
-a is b
-a is not b
-a in [1, 2, 3]
-a not in [1,2,3]
-a & b
-a | b
-a ^ b
-a and b
-a or b
-a += 1
-a -= 1
-a *= b
-a /= b
-arr @ arr
-arr @= arr
-"""
-
-
 def test_parsing():
     str(parse(code1))
-    str(parse(code2))
-    str(parse(code_operations))
 
+def test_functions():
+    str(parse(code2))
+
+@pytest.mark.parametrize(
+    "op",
+    # fmt: off
+    ["+", "-", "*", "/", "%", "==", "!=", ">", ">=", "<", "<=", "is", "is not",
+     "in", "not in", "**", "@", "//", "&", "|", "^", "and", "or"]
+    # fmt: on
+)
+def test_binary_op(op: str):
+    str(parse(f"a {op} b"))
+
+@pytest.mark.parametrize(
+    "op",
+    ["+", "-", "~", "not "],
+)
+def test_unary_op(op: str):
+    str(parse(f"{op}a"))
+
+@pytest.mark.parametrize(
+    "op",
+    ["+", "-", "*", "/", "%", "**", "//", "@", "&", "|", "^"],
+)
+def test_increment_op(op: str):
+    str(parse(f"a {op}= b"))
+
+@pytest.mark.parametrize(
+    "s",
+    ["a{b}c", "a{b!r}c", "a{b!s}c", "a{b!a}c", "a{x:<2}", "a{x:<{y}}", "a{x:{t}^{u}}"],
+)
+def test_fstring(s: str):
+    s0 = "f'" + s + "'"
+    parsed = str(parse(s0))
+    assert parsed == s0
 
 def test_special_methods():
     macro = Macro(flags={"Return": False})

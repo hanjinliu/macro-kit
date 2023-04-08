@@ -174,7 +174,7 @@ class Mock:
 
 def tuple(iterable, /):
     """Construct tuple-expression."""
-    return Expr.parse_call(builtins.tuple, list(iterable))
+    return Expr.parse_call(builtins.tuple, (builtins.list(iterable),))
 
 
 def dict(*args, **kwargs):
@@ -185,17 +185,17 @@ def dict(*args, **kwargs):
 
 def set(iterable, /):
     """Construct set-expression."""
-    return Expr.parse_call(builtins.set, list(iterable))
+    return Expr.parse_call(builtins.set, (builtins.list(iterable),))
 
 
 def list(iterable, /):
     """Construct list-expression."""
-    return Expr.parse_call(builtins.list, list(iterable))
+    return Expr.parse_call(builtins.list, (builtins.list(iterable),))
 
 
 def frozenset(iterable, /):
     """Construct frozenset-expression."""
-    return Expr.parse_call(builtins.frozenset, list(iterable))
+    return Expr.parse_call(builtins.frozenset, (builtins.list(iterable),))
 
 
 def slice(*args):

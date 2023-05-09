@@ -39,6 +39,10 @@ class Mock:
         """Convert Mock into an Expr-style object."""
         return self._sym
 
+    def eval(self, _globals: builtins.dict = {}, _locals: builtins.dict = {}):
+        """Evaluate the Mock object."""
+        return self._sym.eval(_globals, _locals)
+
     def __getattr__(self, attr: str) -> Mock:
         """Return a Mock with expression 'mock.attr'."""
         expr = Expr(Head.getattr, [self._sym, attr])
@@ -170,6 +174,95 @@ class Mock:
     def __invert__(self) -> Mock:
         """Return a Mock with expression '~mock'."""
         return self._unop("__invert__")
+
+    def and_(self, other) -> Mock:
+        """Return a Mock with expression 'mock and other'."""
+        expr = Expr(Head.binop, [Symbol._reserved("and"), self._sym, other])
+        return self.__class__(expr)
+
+    def or_(self, other) -> Mock:
+        """Return a Mock with expression 'mock or other'."""
+        expr = Expr(Head.binop, [Symbol._reserved("or"), self._sym, other])
+        return self.__class__(expr)
+
+    def len_(self) -> Mock:
+        """Return a Mock with expression 'len(mock)'."""
+        expr = Expr.parse_call(builtins.len, (self._sym,))
+        return self.__class__(expr)
+
+    def in_(self, other) -> Mock:
+        """Return a Mock with expression 'mock in other'."""
+        expr = Expr(Head.binop, [Symbol._reserved("in"), self._sym, other])
+        return self.__class__(expr)
+
+    def not_in_(self, other) -> Mock:
+        """Return a Mock with expression 'mock not in other'."""
+        expr = Expr(Head.binop, [Symbol._reserved("not in"), self._sym, other])
+        return self.__class__(expr)
+
+    def is_(self, other) -> Mock:
+        """Return a Mock with expression 'mock is other'."""
+        expr = Expr(Head.binop, [Symbol._reserved("is"), self._sym, other])
+        return self.__class__(expr)
+
+    def is_not_(self, other) -> Mock:
+        """Return a Mock with expression 'mock is not other'."""
+        expr = Expr(Head.binop, [Symbol._reserved("is not"), self._sym, other])
+        return self.__class__(expr)
+
+    @classmethod
+    def len(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'len(mock)'."""
+        expr = Expr.parse_call(builtins.len, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def abs(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'abs(mock)'."""
+        expr = Expr.parse_call(builtins.abs, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def round(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'round(mock)'."""
+        expr = Expr.parse_call(builtins.round, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def min(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'min(mock)'."""
+        expr = Expr.parse_call(builtins.min, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def max(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'max(mock)'."""
+        expr = Expr.parse_call(builtins.max, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def sum(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'sum(mock)'."""
+        expr = Expr.parse_call(builtins.sum, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def any(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'any(mock)'."""
+        expr = Expr.parse_call(builtins.any, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def all(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'all(mock)'."""
+        expr = Expr.parse_call(builtins.all, (mock._sym,))
+        return cls(expr)
+
+    @classmethod
+    def not_(cls, mock: Mock) -> Mock:
+        """Return a Mock with expression 'not mock'."""
+        expr = Expr(Head.unop, [Symbol._reserved("not "), mock._sym])
+        return cls(expr)
 
 
 def tuple(iterable, /):

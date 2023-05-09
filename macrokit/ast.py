@@ -400,6 +400,11 @@ def _yield_from(ast_object: ast.YieldFrom):
     return Expr(Head.yield_from, [from_ast(ast_object.value)])
 
 
+@from_ast.register
+def _index(ast_object: ast.Index):  # python 3.8
+    return from_ast(ast_object.value)  # type: ignore
+
+
 def _nest_binop(op, values: List[ast.expr]):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]

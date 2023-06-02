@@ -331,7 +331,7 @@ def _generator(ast_object: ast.GeneratorExp):
     return _generator_to_args(from_ast(ast_object.elt), ast_object.generators)
 
 
-def _generator_to_args(elt: "Symbol | Expr", comps: list[ast.comprehension]):
+def _generator_to_args(elt: "Symbol | Expr", comps: List[ast.comprehension]):
     out = _gen(elt, comps[0])
     if len(comps) > 1:
         for comp in comps[1:]:

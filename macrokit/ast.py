@@ -308,6 +308,45 @@ def _while(ast_object: ast.While):
 
 
 @from_ast.register
+def _listcomp(ast_object: ast.ListComp):
+    gen = _generator_to_args(from_ast(ast_object.elt), ast_object.generators)
+    return Expr(Head.list, [gen])
+
+
+@from_ast.register
+def _dictcomp(ast_object: ast.DictComp):
+    elt = Expr(Head.annotate, [from_ast(ast_object.key), from_ast(ast_object.value)])
+    gen = _generator_to_args(elt, ast_object.generators)
+    return Expr(Head.braces, [gen])
+
+
+@from_ast.register
+def _setcomp(ast_object: ast.SetComp):
+    gen = _generator_to_args(from_ast(ast_object.elt), ast_object.generators)
+    return Expr(Head.braces, [gen])
+
+
+@from_ast.register
+def _generator(ast_object: ast.GeneratorExp):
+    return _generator_to_args(from_ast(ast_object.elt), ast_object.generators)
+
+
+def _generator_to_args(elt: "Symbol | Expr", comps: list[ast.comprehension]):
+    out = _gen(elt, comps[0])
+    if len(comps) > 1:
+        for comp in comps[1:]:
+            out = _gen(out, comp)
+    return out
+
+
+def _gen(elt: "Symbol | Expr", comp: ast.comprehension):
+    args = [elt, from_ast(comp.target), from_ast(comp.iter)]
+    for _if in comp.ifs:
+        args.append(Expr(Head.filter, [from_ast(_if)]))
+    return Expr(Head.generator, args)
+
+
+@from_ast.register
 def _list_of_ast(ast_object: list):
     head = Head.block
     args = [from_ast(k) for k in ast_object]

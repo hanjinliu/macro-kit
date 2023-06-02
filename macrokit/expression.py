@@ -67,6 +67,21 @@ def _tuple_str(x: "Expr", i: int):
         return f"{_s_(i)}({tup})"
 
 
+def _filt_str(x: "Symbol | Expr", i: int):
+    return f"{_s_(i)}if {x}"
+
+
+def _generator_str(x: "Expr", i: int):
+    args = x.args
+    if len(args) == 3:
+        return f"{_s_(i)}({str_(args[0])} for {str_(args[1])} in {str_(args[2])})"
+    else:
+        filt = " ".join(_filt_str(f, i) for f in args[3:])
+        return (
+            f"{_s_(i)}({str_(args[0])} for {str_(args[1])} in {str_(args[2])} {filt})"
+        )
+
+
 _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
@@ -94,6 +109,8 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.elif_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
     Head.for_: lambda e, i: f"{_s_(i)}for {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.while_: lambda e, i: f"{_s_(i)}while {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
+    Head.generator: _generator_str,
+    Head.filter: _filt_str,
     Head.annotate: lambda e, i: f"{str_(e.args[0], i)}: {str_(e.args[1])}",
 }
 

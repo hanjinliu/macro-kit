@@ -292,6 +292,19 @@ def test_special_methods():
     macro_str = str(macro.format([(a, Symbol("a"))]))
     assert macro_str == "a = A()\nlen(a)\nbool(a)\nint(a)\nfloat(a)\nstr(a)"
 
+@pytest.mark.parametrize(
+    "s",
+    [
+        "(a + 1 for a in range(4))",
+        "[a + 1 for a in range(4)]",
+        "{a + 1 for a in range(4)}",
+        "{a: b for a, b in zip(range(4), range(4))}",
+        "{a: b for a, b in zip(range(4), range(4)) if a % 2 == 0}",
+        "[a + b for a in range(3) for b in range(3)]",
+    ]
+)
+def test_generators(s: str):
+    parse(s)
 
 def test_field():
     class A:

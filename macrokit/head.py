@@ -30,6 +30,8 @@ class Head(Enum):
     elif_ = "elif"
     for_ = "for"
     while_ = "while"
+    generator = "generator"
+    filter = "filter"
     annotate = "annotate"
 
 

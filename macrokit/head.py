@@ -37,6 +37,8 @@ class Head(Enum):
     as_ = "as"
     with_ = "with"
     class_ = "class"
+    star = "star"
+    decorator = "decorator"
 
 
 EXEC = (

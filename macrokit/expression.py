@@ -145,6 +145,8 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.with_: lambda e, i: f"{_s_(i)}with {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.as_: lambda e, i: f"{str_(e.args[0])} as {e.args[1]}",
     Head.import_: _import_str,
+    Head.star: lambda e, i: f"{_s_(i)}*{str_(e.args[0])}",
+    Head.decorator: lambda e, i: f"{_s_(i)}@{str_(e.args[0])}\n{_s_(i)}{e.args[1]}",
 }
 
 _Expr = Union[Symbol, "Expr"]
@@ -153,14 +155,10 @@ _Expr = Union[Symbol, "Expr"]
 class Expr:
     """An expression object for metaprogramming."""
 
-    n: int = 0
-
     def __init__(self, head: Head, args: Iterable[Any]):
         self._head = Head(head)
         self._args = list(map(self.__class__.parse_object, args))
         validator(self._head, self._args)
-        self.number = self.__class__.n
-        self.__class__.n += 1
 
     @property
     def head(self) -> Head:

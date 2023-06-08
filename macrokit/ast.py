@@ -365,13 +365,22 @@ def _function_def(ast_object: ast.FunctionDef):
         Expr(Head.kw, [from_ast(k), from_ast(v)])
         for k, v in zip(fargs.args[nargs:], fargs.defaults)
     ]
-    return Expr(
+    out = Expr(
         head,
         [
             Expr(Head.call, [fname] + args + kwargs),  # type: ignore
             from_ast(ast_object.body),
         ],
     )
+    for dec in ast_object.decorator_list:
+        out = Expr(Head.decorator, [from_ast(dec), out])
+
+    return out
+
+
+@from_ast.register
+def _starred(ast_object: ast.Starred):
+    return Expr(Head.star, [from_ast(ast_object.value)])
 
 
 @from_ast.register
@@ -493,7 +502,10 @@ def _class(ast_object: ast.ClassDef):
     else:
         _cls = name
     body = Expr(Head.block, [from_ast(k) for k in ast_object.body])
-    return Expr(head, [_cls, body])
+    out = Expr(head, [_cls, body])
+    for dec in ast_object.decorator_list:
+        out = Expr(Head.decorator, [from_ast(dec), out])
+    return out
 
 
 @from_ast.register

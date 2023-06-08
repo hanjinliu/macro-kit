@@ -50,7 +50,6 @@ def _no_arg(args):
 
 
 @validator.register(Head.del_)
-@validator.register(Head.raise_)
 def _single_arg(args):
     if len(args) != 1:
         raise ValidationError()

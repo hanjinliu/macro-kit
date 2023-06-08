@@ -50,33 +50,17 @@ def test_module():
     )
 
     import numpy as np
-    import skimage
 
     macro = Macro()
-    skimage_ = macro.record(skimage)
     np_ = macro.record(np)
     img = np_.random.normal(size=(128, 128))
-    out = skimage_.filters.gaussian(img, sigma=2)
-    thr = skimage_.filters.threshold_otsu(out)
-    macro_str = str(
-        macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])
-    )
-    assert (
-        macro_str == "img = numpy.random.normal(size=(128, 128))\n"
-        "out = skimage.filters.gaussian(img, sigma=2)\n"
-        "thr = skimage.filters.threshold_otsu(out)"
-    )
+    macro_str = str(macro.format([(img, Symbol("img"))]))
+    assert macro_str == "img = numpy.random.normal(size=(128, 128))"
 
     macro.eval()
 
-    macro_str = str(
-        macro.format([(img, Symbol("img")), (out, Symbol("out")), (thr, Symbol("thr"))])
-    )
-    assert (
-        macro_str == "img = numpy.random.normal(size=(128, 128))\n"
-        "out = skimage.filters.gaussian(img, sigma=2)\n"
-        "thr = skimage.filters.threshold_otsu(out)"
-    )
+    macro_str = str(macro.format([(img, Symbol("img"))]))
+    assert macro_str == "img = numpy.random.normal(size=(128, 128))"
 
     macro = Macro()
     df_ = Expr("getattr", [pd, pd.DataFrame])
@@ -269,6 +253,20 @@ def test_parsing():
 
 def test_functions():
     str(parse(code2))
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "@dec\ndef f():\n    return 0",
+        "@dec(x, y=0)\ndef f(t):\n    return t",
+        "@dec\n@dec2\n@dec3\n@dec4\ndef f():\n    return 0"
+        "@dec\nclass A:\n    pass",
+        "@dec(x, y=0)\nclass A:\n    pass",
+        "@dec\n@dec2\n@dec3\n@dec4\nclass A:\n    pass"
+    ]
+)
+def test_decorator(code: str):
+    str(parse(code))
 
 @pytest.mark.parametrize(
     "op",

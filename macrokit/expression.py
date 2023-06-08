@@ -10,9 +10,6 @@ from typing import (
     Sequence,
     overload,
     Union,
-    List,
-    Tuple,
-    Dict,
 )
 import inspect
 
@@ -111,7 +108,7 @@ def _import_str(x: "Expr", i: int):
     return f"{_s_(i)}{prefix}import {sjoin(', ', args, i)}"
 
 
-_STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
+_STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
     Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{str_(e.args[1])}]",
@@ -166,7 +163,7 @@ class Expr:
         return self._head
 
     @property
-    def args(self) -> List[_Expr]:
+    def args(self) -> "list[_Expr]":
         """Return args of Expr."""
         return self._args
 
@@ -248,14 +245,14 @@ class Expr:
             Updated variable namespace. Will be a mapping from symbols to values.
 
         """
-        _glb: Dict[str, Any] = {
+        _glb: "dict[str, Any]" = {
             (sym.name if isinstance(sym, Symbol) else sym): v
             for sym, v in _globals.items()
         }
 
         # use registered modules
         if _STORED_VALUES:
-            format_dict: Dict[Symbol, _Expr] = {}
+            format_dict: "dict[Symbol, _Expr]" = {}
             for id_, (sym, obj) in _STORED_VALUES.items():
                 if isinstance(sym, Expr):
                     continue
@@ -276,7 +273,7 @@ class Expr:
         cls,
         obj: Any,
         func: Callable,
-        args: Tuple[Any, ...] = None,
+        args: "tuple[Any, ...]" = None,
         kwargs: dict = None,
     ) -> "Expr":
         """Parse ``obj.func(*args, **kwargs)``."""
@@ -288,7 +285,7 @@ class Expr:
         cls,
         obj: Any,
         init_cls: Union[type, "Expr"] = None,
-        args: Tuple[Any, ...] = None,
+        args: "tuple[Any, ...]" = None,
         kwargs: dict = None,
     ) -> "Expr":
         """Parse ``obj = init_cls(*args, **kwargs)``."""
@@ -301,7 +298,7 @@ class Expr:
     def parse_call(
         cls,
         func: Union[Callable, _Expr],
-        args: Tuple[Any, ...] = None,
+        args: "tuple[Any, ...]" = None,
         kwargs: dict = None,
     ) -> "Expr":
         """Parse ``func(*args, **kwargs)``."""
@@ -316,7 +313,7 @@ class Expr:
         inputs = [func] + cls._convert_args(args, kwargs)
         return cls(head=Head.call, args=inputs)
 
-    def split_call(self) -> Tuple[_Expr, Tuple[_Expr, ...], Dict[str, _Expr]]:
+    def split_call(self) -> "tuple[_Expr, tuple[_Expr, ...], dict[str, _Expr]]":
         """Split ``func(*args, **kwargs)`` to (func, args, kwargs)."""
         if self.head is not Head.call:
             raise ValueError(f"Expected {Head.call}, got {self.head}.")
@@ -334,7 +331,7 @@ class Expr:
 
     def split_method(
         self,
-    ) -> Tuple[_Expr, Symbol, Tuple[_Expr, ...], Dict[str, _Expr]]:
+    ) -> "tuple[_Expr, Symbol, tuple[_Expr, ...], dict[str, _Expr]]":
         """Split ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
         fn, args, kwargs = self.split_call()
         if not isinstance(fn, Expr) or fn.head is not Head.getattr:
@@ -347,7 +344,7 @@ class Expr:
     def eval_call_args(
         self,
         ns: dict = {},
-    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+    ) -> "tuple[tuple[Any, ...], dict[str, Any]]":
         """
         Evaluate arguments in call expression.
 
@@ -386,7 +383,7 @@ class Expr:
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
-    def split_setitem(self) -> Tuple[_Expr, Symbol, _Expr]:
+    def split_setitem(self) -> "tuple[_Expr, Symbol, _Expr]":
         """Return ``obj, key, value`` if ``self`` is ``obj[key] = value``."""
         if self.head is not Head.assign:
             raise ValueError("Not a setitem expression.")
@@ -404,7 +401,7 @@ class Expr:
         target = cls(Head.getitem, [symbol(obj), symbol(key)])
         return cls(Head.del_, [target])
 
-    def split_delitem(self) -> Tuple[_Expr, Symbol]:
+    def split_delitem(self) -> "tuple[_Expr, Symbol]":
         """Return ``obj, key`` if ``self`` is ``del obj[key]``."""
         if self.head is not Head.del_:
             raise ValueError("Not a delitem expression.")
@@ -422,7 +419,7 @@ class Expr:
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
         return cls(Head.assign, [target, symbol(value)])
 
-    def split_setattr(self) -> Tuple[_Expr, Symbol, _Expr]:
+    def split_setattr(self) -> "tuple[_Expr, Symbol, _Expr]":
         """Return ``obj, key, value`` if ``self`` is ``obj.key = value``."""
         if self.head is not Head.assign:
             raise ValueError("Not a setattr expression.")
@@ -440,7 +437,7 @@ class Expr:
         target = cls(Head.getattr, [symbol(obj), Symbol(key)])
         return cls(Head.del_, [target])
 
-    def split_delattr(self) -> Tuple[_Expr, Symbol]:
+    def split_delattr(self) -> "tuple[_Expr, Symbol]":
         """Return ``obj, key`` if ``self`` is ``del obj.key``."""
         if self.head is not Head.del_:
             raise ValueError("Not a delattr expression.")
@@ -453,7 +450,7 @@ class Expr:
         return obj, attr
 
     @classmethod
-    def _convert_args(cls, args: Tuple[Any, ...], kwargs: dict) -> list:
+    def _convert_args(cls, args: "tuple[Any, ...]", kwargs: "dict[str, Any]") -> list:
         inputs = []
         for a in args:
             inputs.append(a)
@@ -501,14 +498,14 @@ class Expr:
         """
         yielded = False
         for arg in self.args:
-            if isinstance(arg, self.__class__):
+            if isinstance(arg, Expr):
                 yield from arg.iter_expr()
                 yielded = True
 
         if not yielded:
             yield self
 
-    def _split(self, head: Head) -> List[Any]:
+    def _split(self, head: Head) -> "list[Any]":
         if self.head is not head:
             raise ValueError(f"Expected {head}, got {self.head}.")
         left = self.args[0]
@@ -518,7 +515,7 @@ class Expr:
         else:
             return left._split(head) + [right]
 
-    def split_getattr(self) -> List[Symbol]:
+    def split_getattr(self) -> "list[Symbol]":
         """
         Split an expression into a list of get-attribute symbols.
 
@@ -527,7 +524,7 @@ class Expr:
         """
         return self._split(Head.getattr)
 
-    def split_getitem(self) -> List[Symbol]:
+    def split_getitem(self) -> "list[Symbol]":
         """
         Split an expression into a list of get-item symbols/strings.
 
@@ -550,7 +547,7 @@ class Expr:
     @overload
     def format(
         self,
-        mapping: Iterable[Tuple[Any, _Expr]],
+        mapping: "Iterable[tuple[Any, _Expr]]",
         inplace: bool = False,
     ) -> "Expr":
         ...
@@ -601,8 +598,8 @@ class Expr:
         return self
 
 
-def _check_format_mapping(mapping_list: Iterable) -> Dict[Symbol, _Expr]:
-    _dict: Dict[Symbol, _Expr] = {}
+def _check_format_mapping(mapping_list: Iterable) -> "dict[Symbol, _Expr]":
+    _dict: "dict[Symbol, _Expr]" = {}
     for comp in mapping_list:
         if len(comp) != 2:
             raise ValueError("Wrong style of mapping list.")
@@ -630,11 +627,11 @@ def _tuple(*args) -> tuple:
 
 # Stored symbols and the actual values. These will be used even after parse()
 # method, to make parse(str(macro)) executable.
-_STORED_VALUES: Dict[int, Tuple[_Expr, Any]] = {}
+_STORED_VALUES: "dict[int, tuple[_Expr, Any]]" = {}
 
 
 # Map to speed up type check
-_SUBCLASS_MAP: Dict[type, type] = {}
+_SUBCLASS_MAP: "dict[type, type]" = {}
 
 
 def symbol(obj: Any, constant: bool = True) -> _Expr:

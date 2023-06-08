@@ -1,7 +1,7 @@
 import ast
 import inspect
 import sys
-from typing import Callable, Dict, Union, List, get_type_hints
+from typing import Callable, Union, get_type_hints
 
 from macrokit.expression import Expr, Head, symbol, _STORED_VALUES
 from macrokit._symbol import Symbol
@@ -49,7 +49,7 @@ def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Sym
     if callable(source):
         source = inspect.getsource(source)
     body = ast.parse(source).body
-    ast_object: Union[List[ast.stmt], ast.stmt]
+    ast_object: Union[list[ast.stmt], ast.stmt]
     if len(body) == 1:
         ast_object = body[0]
     else:
@@ -66,7 +66,7 @@ class singledispatch:
 
     def __init__(self, func: Callable):
         self.func = func
-        self._registry: Dict[type, Callable] = {}
+        self._registry = dict[type, Callable]()
 
     def __call__(self, *args, **kwargs):
         """Dispatch to the registered function for the type of the first argument."""
@@ -331,7 +331,7 @@ def _generator(ast_object: ast.GeneratorExp):
     return _generator_to_args(from_ast(ast_object.elt), ast_object.generators)
 
 
-def _generator_to_args(elt: "Symbol | Expr", comps: List[ast.comprehension]):
+def _generator_to_args(elt: "Symbol | Expr", comps: list[ast.comprehension]):
     out = _gen(elt, comps[0])
     if len(comps) > 1:
         for comp in comps[1:]:
@@ -411,10 +411,10 @@ def _continue(ast_object: ast.Continue):
 
 @from_ast.register
 def _raise(ast_object: ast.Raise):
-    exc = ast_object.exc
+    args = [from_ast(ast_object.exc)]
     if ast_object.cause:
-        raise ValueError("'raise XX from YY' is not supported yet")
-    return Expr(Head.raise_, [from_ast(exc)])
+        args.append(Expr(Head.from_, [from_ast(ast_object.cause)]))
+    return Expr(Head.raise_, args)
 
 
 @from_ast.register
@@ -436,22 +436,88 @@ def _yield(ast_object: ast.Yield):
 
 @from_ast.register
 def _yield_from(ast_object: ast.YieldFrom):
-    return Expr(Head.yield_from, [from_ast(ast_object.value)])
+    from_ = Expr(Head.from_, [from_ast(ast_object.value)])
+    return Expr(Head.yield_, [from_])
 
 
 @from_ast.register
-def _index(ast_object: ast.Index):  # python 3.8
-    return from_ast(ast_object.value)  # type: ignore
+def _import(ast_object: ast.Import):
+    head = Head.import_
+    args = [from_ast(k) for k in ast_object.names]
+    return Expr(head, args)
 
 
-def _nest_binop(op, values: List[ast.expr]):
+@from_ast.register
+def _import_from(ast_object: ast.ImportFrom):
+    head = Head.import_
+    _from = Expr(Head.from_, [Symbol(ast_object.module)])
+    _names = [from_ast(name) for name in ast_object.names]
+    return Expr(head, _names + [_from])
+
+
+@from_ast.register
+def _alias(ast_object: ast.alias):
+    sym = Symbol(ast_object.name)
+    if ast_object.asname:
+        return Expr(Head.as_, [sym, Symbol(ast_object.asname)])
+    else:
+        return sym
+
+
+@from_ast.register
+def _with(ast_object: ast.With):
+    head = Head.with_
+    args = [from_ast(k) for k in ast_object.items]
+    args.append(from_ast(ast_object.body))
+    return Expr(head, args)
+
+
+@from_ast.register
+def _withitem(ast_object: ast.withitem):
+    left = from_ast(ast_object.context_expr)
+    if ast_object.optional_vars:
+        right = from_ast(ast_object.optional_vars)
+        return Expr(Head.as_, [left, right])
+    return left
+
+
+@from_ast.register
+def _class(ast_object: ast.ClassDef):
+    head = Head.class_
+    args = [from_ast(k) for k in ast_object.bases]
+    kwargs = [from_ast(kw) for kw in ast_object.keywords]
+    name = Symbol(ast_object.name)
+    _cls: Union[Symbol, Expr]
+    if args or kwargs:
+        _cls = Expr(Head.call, [name] + args + kwargs)
+    else:
+        _cls = name
+    body = Expr(Head.block, [from_ast(k) for k in ast_object.body])
+    return Expr(head, [_cls, body])
+
+
+@from_ast.register
+def _keyword(ast_object: ast.keyword):
+    return Expr(Head.kw, [from_ast(ast_object.arg), from_ast(ast_object.value)])
+
+
+@from_ast.register
+def _assert(ast_object: ast.Assert):
+    head = Head.assert_
+    args = [from_ast(ast_object.test)]
+    if ast_object.msg:
+        args.append(from_ast(ast_object.msg))
+    return Expr(head, args)
+
+
+def _nest_binop(op, values: list[ast.expr]):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]
     else:
         return [op, from_ast(values[0]), Expr(Head.binop, _nest_binop(op, values[1:]))]
 
 
-def _nest_compare(ops: List[ast.cmpop], values: List[ast.expr]):
+def _nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
     if len(ops) == 1:
         return [AST_BINOP_MAP[type(ops[0])], from_ast(values[0]), from_ast(values[1])]
     else:

@@ -68,7 +68,17 @@ def _tuple_str(x: "Expr", i: int):
 
 
 def _filt_str(x: "Symbol | Expr", i: int):
-    return f"{_s_(i)}if {x}"
+    if isinstance(x, Symbol):
+        return f"{_s_(i)}if {x}"
+    return f"{_s_(i)}if {x.args[0]}"
+
+
+def _assert_str(x: "Expr", i: int):
+    args = x.args
+    if len(args) == 1:
+        return f"{_s_(i)}assert {str_(args[0])}"
+    else:
+        return f"{_s_(i)}assert {_comma(str_(args[0]), str_(args[1]))}"
 
 
 def _generator_str(x: "Expr", i: int):
@@ -82,6 +92,24 @@ def _generator_str(x: "Expr", i: int):
         )
 
 
+def _yield_str(x: "Expr", i: int):
+    args = x.args
+    if isinstance(args[0], Expr) and args[0].head is Head.from_:
+        return f"{_s_(i)}yield from {str_(args[0].args[0])}"
+    return f"{_s_(i)}yield {sjoin(', ', args)}"
+
+
+def _import_str(x: "Expr", i: int):
+    if isinstance(arg0 := x.args[-1], Expr) and arg0.head == Head.from_:
+        args = x.args[:-1]
+        prefix = f"from {arg0.args[0]} "
+    else:
+        args = x.args
+        prefix = ""
+
+    return f"{_s_(i)}{prefix}import {sjoin(', ', args, i)}"
+
+
 _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
@@ -93,7 +121,7 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.call: lambda e, i: f"{str_(e.args[0], i)}({sjoin(', ', e.args[1:])})",
     Head.assign: lambda e, i: f"{str_(e.args[0], i)} = {e.args[1]}",
     Head.kw: lambda e, i: f"{str_(e.args[0])}={str_(e.args[1])}",
-    Head.assert_: lambda e, i: f"{_s_(i)}assert {_comma(str_(e.args[0]), str_(e.args[1]))}",  # noqa
+    Head.assert_: _assert_str,
     Head.comment: lambda e, i: f"{_s_(i)}# {e.args[0]}",
     Head.unop: lambda e, i: f"{_s_(i)}({str_(e.args[0])}{str_(e.args[1])})",
     Head.binop: lambda e, i: f"{_s_(i)}({str_(e.args[1])} {str_(e.args[0])} {str_(e.args[2])})",  # noqa
@@ -102,8 +130,7 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.function: lambda e, i: f"{_s_(i)}def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.lambda_: lambda e, i: f"{str_lmd(e.args[0], i)}: {str_(e.args[1])}",  # noqa
     Head.return_: lambda e, i: f"{_s_(i)}return {sjoin(', ', e.args)}",
-    Head.yield_: lambda e, i: f"{_s_(i)}yield {sjoin(', ', e.args)}",
-    Head.yield_from: lambda e, i: f"{_s_(i)}yield from {sjoin(', ', e.args)}",
+    Head.yield_: _yield_str,
     Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
     Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
     Head.elif_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
@@ -112,6 +139,11 @@ _STR_MAP: Dict[Head, Callable[["Expr", int], str]] = {
     Head.generator: _generator_str,
     Head.filter: _filt_str,
     Head.annotate: lambda e, i: f"{str_(e.args[0], i)}: {str_(e.args[1])}",
+    Head.class_: lambda e, i: f"{_s_(i)}class {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
+    Head.from_: lambda e, i: f"{_s_(i)}from {str_(e.args[0])}",  # noqa
+    Head.with_: lambda e, i: f"{_s_(i)}with {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
+    Head.as_: lambda e, i: f"{str_(e.args[0])} as {e.args[1]}",
+    Head.import_: _import_str,
 }
 
 _Expr = Union[Symbol, "Expr"]

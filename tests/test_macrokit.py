@@ -196,6 +196,47 @@ def test_register_type():
     unregister_type(np.ndarray)
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        "a.b",
+        "a.b",
+        "a['b']",
+        "del a",
+        "del a, b",
+        "f(x, y=1)",
+        "x = 0",
+        "x: int = 0",
+        "assert x == 0",
+        "assert x == 0, 'x must be 0.'",
+        "+a",
+        "-a",
+        "~a",
+        "not a",
+        "return",
+        "return 0",
+        "return 0, 1",
+        "yield",
+        "yield a",
+        "yield a, b",
+        "yield from gen()",
+        "lambda x, y: x + y",
+        "raise Exception()",
+        "raise Exception() from e",
+        "[x for x in range(10)]",
+        "[x for x in range(10) if x % 2 == 0]",
+        "import numpy",
+        "import numpy as np",
+        "import numpy.linalg as la",
+        "from numpy import linalg as la",
+        "from numpy.linalg import norm",
+        "from numpy.linalg import norm as nrm",
+    ]
+)
+def test_parsing_single_line(line: str):
+    expr = parse(line)
+    str(expr)
+
 code1 = """
 a = np.arange(12)
 for i in a:
@@ -238,13 +279,6 @@ def test_functions():
 )
 def test_binary_op(op: str):
     str(parse(f"a {op} b"))
-
-@pytest.mark.parametrize(
-    "op",
-    ["+", "-", "~", "not "],
-)
-def test_unary_op(op: str):
-    str(parse(f"{op}a"))
 
 @pytest.mark.parametrize(
     "op",

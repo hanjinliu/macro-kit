@@ -67,7 +67,6 @@ def _single_str(args):
     return args
 
 
-@validator.register(Head.assert_)
 @validator.register(Head.getitem)
 @validator.register(Head.unop)
 @validator.register(Head.annotate)

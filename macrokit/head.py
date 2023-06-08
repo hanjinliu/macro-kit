@@ -24,7 +24,6 @@ class Head(Enum):
     lambda_ = "lambda"
     return_ = "return"
     yield_ = "yield"
-    yield_from = "yield_from"
     raise_ = "raise"
     if_ = "if"
     elif_ = "elif"
@@ -33,6 +32,11 @@ class Head(Enum):
     generator = "generator"
     filter = "filter"
     annotate = "annotate"
+    import_ = "import"
+    from_ = "from"
+    as_ = "as"
+    with_ = "with"
+    class_ = "class"
 
 
 EXEC = (
@@ -49,4 +53,9 @@ EXEC = (
     Head.for_,
     Head.while_,
     Head.annotate,
+    Head.import_,
+    Head.from_,
+    Head.as_,
+    Head.with_,
+    Head.class_,
 )

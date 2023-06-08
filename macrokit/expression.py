@@ -100,7 +100,8 @@ def _yield_str(x: "Expr", i: int):
 
 
 def _import_str(x: "Expr", i: int):
-    if isinstance(arg0 := x.args[-1], Expr) and arg0.head == Head.from_:
+    arg0 = x.args[-1]
+    if isinstance(arg0, Expr) and arg0.head == Head.from_:
         args = x.args[:-1]
         prefix = f"from {arg0.args[0]} "
     else:

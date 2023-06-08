@@ -49,7 +49,7 @@ def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Sym
     if callable(source):
         source = inspect.getsource(source)
     body = ast.parse(source).body
-    ast_object: Union[list[ast.stmt], ast.stmt]
+    ast_object: "Union[list[ast.stmt], ast.stmt]"
     if len(body) == 1:
         ast_object = body[0]
     else:
@@ -66,7 +66,7 @@ class singledispatch:
 
     def __init__(self, func: Callable):
         self.func = func
-        self._registry = dict[type, Callable]()
+        self._registry: "dict[type, Callable]" = {}
 
     def __call__(self, *args, **kwargs):
         """Dispatch to the registered function for the type of the first argument."""
@@ -331,7 +331,7 @@ def _generator(ast_object: ast.GeneratorExp):
     return _generator_to_args(from_ast(ast_object.elt), ast_object.generators)
 
 
-def _generator_to_args(elt: "Symbol | Expr", comps: list[ast.comprehension]):
+def _generator_to_args(elt: "Symbol | Expr", comps: "list[ast.comprehension]"):
     out = _gen(elt, comps[0])
     if len(comps) > 1:
         for comp in comps[1:]:
@@ -510,14 +510,14 @@ def _assert(ast_object: ast.Assert):
     return Expr(head, args)
 
 
-def _nest_binop(op, values: list[ast.expr]):
+def _nest_binop(op, values: "list[ast.expr]"):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]
     else:
         return [op, from_ast(values[0]), Expr(Head.binop, _nest_binop(op, values[1:]))]
 
 
-def _nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
+def _nest_compare(ops: "list[ast.cmpop]", values: "list[ast.expr]"):
     if len(ops) == 1:
         return [AST_BINOP_MAP[type(ops[0])], from_ast(values[0]), from_ast(values[1])]
     else:
@@ -529,7 +529,7 @@ def _nest_compare(ops: list[ast.cmpop], values: list[ast.expr]):
 
 
 def _nest_joinedstr(ast_object: ast.JoinedStr):
-    strs: list[str] = []
+    strs: "list[str]" = []
     for k in ast_object.values:
         if isinstance(k, ast.FormattedValue):
             name = k.value

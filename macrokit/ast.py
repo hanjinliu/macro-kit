@@ -1,6 +1,5 @@
 import ast
 import inspect
-import sys
 from typing import Callable, Union, get_type_hints
 
 from macrokit.expression import Expr, Head, symbol, _STORED_VALUES
@@ -99,33 +98,9 @@ def _expr(ast_object: ast.Expr):
     return from_ast(ast_object.value)
 
 
-if sys.version_info < (3, 8):
-
-    @from_ast.register
-    def _(ast_object: ast.Num):
-        return symbol(ast_object.n)
-
-    @from_ast.register
-    def _str(ast_object: ast.Str):
-        return symbol(ast_object.s)
-
-    @from_ast.register
-    def _name_constant(ast_object: ast.NameConstant):
-        return symbol(ast_object.n)
-
-    @from_ast.register
-    def _bytes(ast_object: ast.Bytes):
-        return symbol(ast_object.s)
-
-    @from_ast.register
-    def _ellipsis(ast_object: ast.Ellipsis):
-        return symbol(ast_object.s)
-
-else:
-
-    @from_ast.register
-    def _constant(ast_object: ast.Constant):
-        return symbol(ast_object.value)
+@from_ast.register
+def _constant(ast_object: ast.Constant):
+    return symbol(ast_object.value)
 
 
 @from_ast.register
@@ -134,7 +109,7 @@ def _name(ast_object: ast.Name):
     for sym, v in _STORED_VALUES.values():
         if isinstance(sym, Symbol) and sym.name == name:
             return symbol(v)
-    return Symbol(ast_object.id)
+    return Symbol(name)
 
 
 @from_ast.register
@@ -295,6 +270,41 @@ def _for(ast_object: ast.For):
     if ast_object.orelse:
         raise ValueError("'else' block is not supported yet")
     return Expr(head, [top, block])
+
+
+@from_ast.register
+def _try(ast_object: ast.Try):
+    head = Head.try_
+    args = [from_ast(ast_object.body)]
+    for k in ast_object.handlers:
+        args.extend(_except_to_list(k))
+    if ast_object.orelse:
+        args.append(from_ast(ast_object.orelse))
+    else:
+        args.append(Expr.empty())
+    if ast_object.finalbody:
+        args.append(from_ast(ast_object.finalbody))
+    else:
+        args.append(Expr.empty())
+
+    return Expr(head, args)
+
+
+def _except_to_list(ast_object: ast.ExceptHandler) -> list[Symbol | Expr]:
+    if ast_object.type is not None:
+        if isinstance(ast_object.type, ast.Name):
+            type_: Symbol | Expr = Symbol(ast_object.type.id)
+        else:
+            type_ = symbol(ast_object.type)
+        if ast_object.name:
+            arg0: Symbol | Expr = Expr(Head.as_, [type_, Symbol(ast_object.name)])
+        else:
+            arg0 = type_
+    else:
+        arg0 = Expr.empty()
+
+    block = from_ast(ast_object.body)
+    return [arg0, block]
 
 
 @from_ast.register

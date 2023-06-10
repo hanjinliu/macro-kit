@@ -96,6 +96,34 @@ def _yield_str(x: "Expr", i: int):
     return f"{_s_(i)}yield {sjoin(', ', args)}"
 
 
+def _try_str(x: "Expr", i: int):
+    _try = x.args[0]
+    _else = x.args[-2]
+    _finally = x.args[-1]
+    _excepts = list(x.args[1:-2])
+    strs = [f"{_s_(i)}try:\n{str_(_try, indent=i + 4)}"]
+
+    while _excepts:
+        _exc_as = _excepts.pop(0)
+        _exc_block = _excepts.pop(0)
+        assert isinstance(_exc_as, Expr)
+        assert isinstance(_exc_block, Expr)
+        if _exc_as.head is Head.empty:
+            strs.append(f"{_s_(i)}except:\n{str_(_exc_block, indent=i + 4)}")
+        else:
+            strs.append(
+                f"{_s_(i)}except {str_(_exc_as)}:\n{str_(_exc_block, indent=i + 4)}"
+            )
+
+    assert isinstance(_else, Expr)
+    assert isinstance(_finally, Expr)
+    if _else.head is not Head.empty:
+        strs.append(f"{_s_(i)}else:\n{str_(_else, indent=i + 4)}")
+    if _finally.head is not Head.empty:
+        strs.append(f"{_s_(i)}finally:\n{str_(_finally, indent=i + 4)}")
+    return "\n".join(strs)
+
+
 def _import_str(x: "Expr", i: int):
     arg0 = x.args[-1]
     if isinstance(arg0, Expr) and arg0.head == Head.from_:
@@ -131,6 +159,7 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.yield_: _yield_str,
     Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
     Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
+    Head.try_: _try_str,
     Head.for_: lambda e, i: f"{_s_(i)}for {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.while_: lambda e, i: f"{_s_(i)}while {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.generator: _generator_str,
@@ -311,6 +340,11 @@ class Expr:
             raise TypeError("kwargs must be a dict")
         inputs = [func] + cls._convert_args(args, kwargs)
         return cls(head=Head.call, args=inputs)
+
+    @classmethod
+    def empty(cls) -> "Expr":
+        """Create an empty expression."""
+        return cls(head=Head.empty, args=[])
 
     def split_call(self) -> "tuple[_Expr, tuple[_Expr, ...], dict[str, _Expr]]":
         """Split ``func(*args, **kwargs)`` to (func, args, kwargs)."""
@@ -644,6 +678,9 @@ def _iter_lines(expr: Expr) -> "Iterator[Symbol | Expr]":
         elif arg.head in (Head.function, Head.class_, Head.with_):
             if isinstance(arg.args[1], Expr):
                 yield from _iter_lines(arg.args[1])
+        elif arg.head is Head.try_:
+            ...  # TODO
+        # decorator?
         else:
             yield arg
 

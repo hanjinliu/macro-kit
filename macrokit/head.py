@@ -26,6 +26,7 @@ class Head(Enum):
     yield_ = "yield"
     raise_ = "raise"
     if_ = "if"
+    try_ = "try"
     for_ = "for"
     while_ = "while"
     generator = "generator"
@@ -58,6 +59,7 @@ EXEC = {
     Head.as_,
     Head.with_,
     Head.class_,
+    Head.try_,
 }
 
 HAS_BLOCK = {
@@ -68,4 +70,5 @@ HAS_BLOCK = {
     Head.function,
     Head.class_,
     Head.with_,
+    Head.try_,
 }

@@ -651,6 +651,8 @@ class Expr:
         self,
     ) -> "Iterator[tuple[_Expr, tuple[_Expr, ...], dict[str, _Expr]]]":
         """Iterate over all the function call and its split."""
+        if self.head is Head.call:
+            yield self.split_call()
         for arg in self.args:
             if isinstance(arg, Symbol):
                 continue

@@ -13,7 +13,7 @@ from typing import (
 )
 import inspect
 
-from macrokit.head import EXEC, Head
+from macrokit.head import EXEC, Head, HAS_BLOCK
 from macrokit.type_map import _TYPE_MAP, register_type
 from macrokit._validator import validator
 from macrokit._symbol import Symbol
@@ -131,7 +131,6 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.yield_: _yield_str,
     Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
     Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
-    Head.elif_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
     Head.for_: lambda e, i: f"{_s_(i)}for {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.while_: lambda e, i: f"{_s_(i)}while {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.generator: _generator_str,
@@ -596,6 +595,57 @@ class Expr:
                 else:
                     self.args[i] = new
         return self
+
+    def iter_lines(self) -> "Iterator[Symbol | Expr]":
+        """Iterate over all the lines in the expression."""
+        if self.head not in HAS_BLOCK:
+            raise ValueError(f"Expr of {self.head} does not have code block.")
+        return _iter_lines(self)
+
+    def iter_getattr(self) -> "Iterator[Expr]":
+        """Iterate over all the get-attribute expression."""
+        for arg in self.args:
+            if isinstance(arg, Symbol):
+                continue
+            if arg.head is Head.getattr:
+                yield arg
+            else:
+                yield from arg.iter_getattr()
+
+    def iter_call_args(
+        self,
+    ) -> "Iterator[tuple[_Expr, tuple[_Expr, ...], dict[str, _Expr]]]":
+        """Iterate over all the function call and its split."""
+        for arg in self.args:
+            if isinstance(arg, Symbol):
+                continue
+            if arg.head is Head.call:
+                yield arg.split_call()
+            else:
+                yield from arg.iter_call_args()
+
+
+def _iter_lines(expr: Expr) -> "Iterator[Symbol | Expr]":
+    for arg in expr.args:
+        if isinstance(arg, Symbol):
+            continue
+        if arg.head is Head.block:
+            yield from _iter_lines(arg)
+        elif arg.head is Head.if_:  # = cond, if, else
+            yield arg.args[0]
+            if isinstance(arg.args[1], Expr):
+                yield from _iter_lines(arg.args[1])
+            if isinstance(arg.args[2], Expr):
+                yield from _iter_lines(arg.args[2])
+        elif arg.head in (Head.for_, Head.while_):  # = binop, block
+            yield arg.args[0]
+            if isinstance(arg.args[1], Expr):
+                yield from _iter_lines(arg.args[1])
+        elif arg.head in (Head.function, Head.class_, Head.with_):
+            if isinstance(arg.args[1], Expr):
+                yield from _iter_lines(arg.args[1])
+        else:
+            yield arg
 
 
 def _check_format_mapping(mapping_list: Iterable) -> "dict[Symbol, _Expr]":

@@ -133,7 +133,6 @@ def _an_arg_and_a_block(args):
 
 
 @validator.register(Head.if_)
-@validator.register(Head.elif_)
 def _two_args_and_a_block(args):
     if len(args) != 3:
         raise ValidationError()

@@ -28,15 +28,12 @@ _STR_MAP: dict[Head, Callable[[Expr, int], str]] = {
     Head.assert_  : lambda e, i: " "*i + f"@assert {as_str(e.args[0])}, {as_str(e.args[1])}".rstrip(", "),
     Head.comment  : lambda e, i: " "*i + f"# {e.args[0]}",
     Head.binop    : lambda e, i: " "*i + f"({as_str(e.args[1])} {as_str(e.args[0])} {as_str(e.args[2])})",
-    
+
     Head.block    : lambda e, i: sjoin("\n", e.args, i),
     Head.function : lambda e, i: " "*i + f"function {as_str(e.args[0])}\n{as_str(e.args[1], i+4)}\n" + \
                                  " "*i + "end",
     Head.return_  : lambda e, i: " "*i + f"return {sjoin(', ', e.args)}",
     Head.if_      : lambda e, i: " "*i + f"if {rm_par(as_str(e.args[0]))}\n{as_str(e.args[1], i+4)}\n" + \
-                                 " "*i + f"else\n{as_str(e.args[2], i+4)}\n" + \
-                                 " "*i + "end",
-    Head.elif_    : lambda e, i: " "*i + f"if {rm_par(as_str(e.args[0]))}\n{as_str(e.args[1], i+4)}\n" + \
                                  " "*i + f"else\n{as_str(e.args[2], i+4)}\n" + \
                                  " "*i + "end",
     Head.for_     : lambda e, i: " "*i + f"for {rm_par(as_str(e.args[0]))}\n{as_str(e.args[1], i+4)}\n" + \

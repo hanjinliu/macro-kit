@@ -26,7 +26,6 @@ class Head(Enum):
     yield_ = "yield"
     raise_ = "raise"
     if_ = "if"
-    elif_ = "elif"
     for_ = "for"
     while_ = "while"
     generator = "generator"
@@ -41,7 +40,7 @@ class Head(Enum):
     decorator = "decorator"
 
 
-EXEC = (
+EXEC = {
     Head.assign,
     Head.assert_,
     Head.comment,
@@ -51,7 +50,6 @@ EXEC = (
     Head.return_,
     Head.raise_,
     Head.if_,
-    Head.elif_,
     Head.for_,
     Head.while_,
     Head.annotate,
@@ -60,4 +58,14 @@ EXEC = (
     Head.as_,
     Head.with_,
     Head.class_,
-)
+}
+
+HAS_BLOCK = {
+    Head.block,
+    Head.if_,
+    Head.for_,
+    Head.while_,
+    Head.function,
+    Head.class_,
+    Head.with_,
+}

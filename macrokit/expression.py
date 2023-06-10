@@ -139,7 +139,7 @@ def _import_str(x: "Expr", i: int):
 _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
-    Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{str_(e.args[1])}]",
+    Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{rm_par(str_(e.args[1]))}]",
     Head.del_: lambda e, i: f"{_s_(i)}del {str_(e.args[0])}",
     Head.tuple: _tuple_str,
     Head.list: lambda e, i: f"{_s_(i)}[{', '.join(str_(arg) for arg in e.args)}]",
@@ -171,6 +171,7 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.as_: lambda e, i: f"{str_(e.args[0])} as {e.args[1]}",
     Head.import_: _import_str,
     Head.star: lambda e, i: f"{_s_(i)}*{str_(e.args[0])}",
+    Head.starstar: lambda e, i: f"{_s_(i)}**{str_(e.args[0])}",
     Head.decorator: lambda e, i: f"{_s_(i)}@{str_(e.args[0])}\n{_s_(i)}{e.args[1]}",
 }
 

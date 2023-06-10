@@ -367,18 +367,41 @@ def _list_of_ast(ast_object: list):
 
 @from_ast.register
 def _function_def(ast_object: ast.FunctionDef):
-    # TODO: positional only etc. are not supported
     head = Head.function
     _call_args: list[Symbol | Expr] = []
     fname = Symbol(ast_object.name)
     _call_args.append(fname)
     fargs = ast_object.args
+    vararg = fargs.vararg
     nargs = len(fargs.args) - len(fargs.defaults)
-    _call_args.extend(from_ast(k) for k in fargs.args[:nargs])
+    _call_args.extend(from_ast(k) for k in fargs.args[:nargs])  # args
+    if fargs.posonlyargs:
+        _call_args.insert(len(fargs.posonlyargs), Symbol._reserved("/"))
     _call_args.extend(
         Expr(Head.kw, [from_ast(k), from_ast(v)])
         for k, v in zip(fargs.args[nargs:], fargs.defaults)
-    )
+    )  # kwargs
+    if vararg is not None:  # *args
+        _input_expr = Expr(Head.star, [Symbol(vararg.arg)])
+        if vararg.annotation is not None:
+            _input_expr = Expr(
+                Head.annotate, [_input_expr, from_ast(vararg.annotation)]
+            )
+        _call_args.append(_input_expr)
+    if fargs.kwonlyargs:
+        _call_args.append(Symbol._reserved("*"))
+        _call_args.extend(
+            Expr(Head.kw, [from_ast(k), from_ast(v)])
+            for k, v in zip(fargs.kwonlyargs, fargs.kw_defaults)
+        )
+    if fargs.kwarg:  # **kwargs
+        _input_expr = Expr(Head.starstar, [Symbol(fargs.kwarg.arg)])
+        if fargs.kwarg.annotation is not None:
+            _input_expr = Expr(
+                Head.annotate, [_input_expr, from_ast(fargs.kwarg.annotation)]
+            )
+        _call_args.append(_input_expr)
+
     out = Expr(
         head,
         [Expr(Head.call, _call_args), from_ast(ast_object.body)],
@@ -521,7 +544,10 @@ def _class(ast_object: ast.ClassDef):
 
 @from_ast.register
 def _keyword(ast_object: ast.keyword):
-    return Expr(Head.kw, [from_ast(ast_object.arg), from_ast(ast_object.value)])
+    val = from_ast(ast_object.value)
+    if ast_object is not None:
+        return Expr(Head.kw, [from_ast(ast_object.arg), val])
+    return Expr(Head.starstar, [val])
 
 
 @from_ast.register

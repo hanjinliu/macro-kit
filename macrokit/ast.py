@@ -1,6 +1,6 @@
 import ast
 import inspect
-from typing import Callable, Union, get_type_hints
+from typing import Any, Callable, Union, get_type_hints
 
 from macrokit.expression import Expr, Head, symbol, _STORED_SYMBOLS
 from macrokit._symbol import Symbol
@@ -60,12 +60,15 @@ def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Sym
     return out
 
 
+_ParseFunc = Callable[[Any], Union[Symbol, Expr]]
+
+
 class singledispatch:
     """Simplified version of functools.singledispatch."""
 
-    def __init__(self, func: Callable):
+    def __init__(self, func: _ParseFunc):
         self.func = func
-        self._registry: "dict[type, Callable]" = {}
+        self._registry: "dict[type, _ParseFunc]" = {}
 
     def __call__(self, *args, **kwargs):
         """Dispatch to the registered function for the type of the first argument."""
@@ -75,7 +78,7 @@ class singledispatch:
             f = self.func
         return f(*args, **kwargs)
 
-    def register(self, func: Callable):
+    def register(self, func: _ParseFunc) -> _ParseFunc:
         """Register function as a handler for a specific type."""
         cls = next(iter(get_type_hints(func).values()))
         self._registry[cls] = func
@@ -252,7 +255,7 @@ def _lambda(ast_object: ast.Lambda):
     return Expr(
         head,
         [
-            Expr(Head.call, [LAMBDA] + args + kwargs),  # type: ignore
+            Expr(Head.call, [LAMBDA] + args + kwargs),
             from_ast(ast_object.body),
         ],
     )
@@ -289,7 +292,7 @@ def _try(ast_object: ast.Try):
     return Expr(head, args)
 
 
-def _except_to_list(ast_object: ast.ExceptHandler) -> list[Symbol | Expr]:
+def _except_to_list(ast_object: ast.ExceptHandler) -> "list[Symbol | Expr]":
     if ast_object.type is not None:
         if isinstance(ast_object.type, ast.Name):
             type_: Symbol | Expr = Symbol(ast_object.type.id)
@@ -366,20 +369,19 @@ def _list_of_ast(ast_object: list):
 def _function_def(ast_object: ast.FunctionDef):
     # TODO: positional only etc. are not supported
     head = Head.function
+    _call_args: list[Symbol | Expr] = []
     fname = Symbol(ast_object.name)
+    _call_args.append(fname)
     fargs = ast_object.args
     nargs = len(fargs.args) - len(fargs.defaults)
-    args = [from_ast(k) for k in fargs.args[:nargs]]
-    kwargs = [
+    _call_args.extend(from_ast(k) for k in fargs.args[:nargs])
+    _call_args.extend(
         Expr(Head.kw, [from_ast(k), from_ast(v)])
         for k, v in zip(fargs.args[nargs:], fargs.defaults)
-    ]
+    )
     out = Expr(
         head,
-        [
-            Expr(Head.call, [fname] + args + kwargs),  # type: ignore
-            from_ast(ast_object.body),
-        ],
+        [Expr(Head.call, _call_args), from_ast(ast_object.body)],
     )
     for dec in ast_object.decorator_list:
         out = Expr(Head.decorator, [from_ast(dec), out])

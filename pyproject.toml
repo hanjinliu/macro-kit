@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "macro-kit"
+dynamic = ["version"]
+description = "Macro recording and metaprogramming in Python"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+authors = [
+    { name = "Hanjin Liu", email = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp" },
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "typing_extensions",
+]
+
+[project.urls]
+Download = "https://github.com/hanjinliu/macro-kit"
+
+[tool.hatch.version]
+path = "macrokit/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/macrokit",
+]

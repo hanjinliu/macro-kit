@@ -20,8 +20,6 @@ from macrokit.ast import parse
 from macrokit.type_map import register_type, unregister_type, type_registered
 from functools import wraps
 
-from macrokit._symbol import COMPILED
-
 __all__ = [
     "Symbol",
     "Head",

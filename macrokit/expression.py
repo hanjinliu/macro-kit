@@ -302,8 +302,8 @@ class Expr:
         cls,
         obj: Any,
         func: Callable,
-        args: "tuple[Any, ...]" = None,
-        kwargs: dict = None,
+        args: "tuple[Any, ...] | None" = None,
+        kwargs: "dict[str, Any] | None" = None,
     ) -> "Expr":
         """Parse ``obj.func(*args, **kwargs)``."""
         method = cls(head=Head.getattr, args=[symbol(obj), func])
@@ -313,9 +313,9 @@ class Expr:
     def parse_init(
         cls,
         obj: Any,
-        init_cls: Union[type, "Expr"] = None,
-        args: "tuple[Any, ...]" = None,
-        kwargs: dict = None,
+        init_cls: "type | Expr | None" = None,
+        args: "tuple[Any, ...] | None" = None,
+        kwargs: "dict[str, Any] | None" = None,
     ) -> "Expr":
         """Parse ``obj = init_cls(*args, **kwargs)``."""
         if init_cls is None:
@@ -327,8 +327,8 @@ class Expr:
     def parse_call(
         cls,
         func: Union[Callable, _Expr],
-        args: "tuple[Any, ...]" = None,
-        kwargs: dict = None,
+        args: "tuple[Any, ...] | None" = None,
+        kwargs: "dict[str, Any] | None" = None,
     ) -> "Expr":
         """Parse ``func(*args, **kwargs)``."""
         if args is None:

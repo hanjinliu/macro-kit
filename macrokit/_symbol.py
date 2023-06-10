@@ -139,14 +139,3 @@ class Symbol:
         out = Symbol(Symbol.make_symbol_str(obj), id(obj))
         out.constant = False
         return out
-
-
-try:
-    import cython
-except ImportError:  # pragma: no cover
-    COMPILED: bool = False
-else:  # pragma: no cover
-    try:
-        COMPILED = cython.compiled
-    except AttributeError:
-        COMPILED = False

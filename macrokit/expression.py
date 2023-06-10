@@ -1,6 +1,7 @@
 import builtins
 from copy import deepcopy
 from numbers import Number
+from weakref import WeakValueDictionary
 from types import FunctionType, ModuleType
 from typing import (
     Any,
@@ -106,9 +107,8 @@ def _try_str(x: "Expr", i: int):
     while _excepts:
         _exc_as = _excepts.pop(0)
         _exc_block = _excepts.pop(0)
-        assert isinstance(_exc_as, Expr)
         assert isinstance(_exc_block, Expr)
-        if _exc_as.head is Head.empty:
+        if isinstance(_exc_as, Expr) and _exc_as.head is Head.empty:
             strs.append(f"{_s_(i)}except:\n{str_(_exc_block, indent=i + 4)}")
         else:
             strs.append(
@@ -667,22 +667,36 @@ def _iter_lines(expr: Expr) -> "Iterator[Symbol | Expr]":
             yield from _iter_lines(arg)
         elif arg.head is Head.if_:  # = cond, if, else
             yield arg.args[0]
-            if isinstance(arg.args[1], Expr):
-                yield from _iter_lines(arg.args[1])
-            if isinstance(arg.args[2], Expr):
-                yield from _iter_lines(arg.args[2])
+            assert isinstance(arg.args[1], Expr)
+            yield from _iter_lines(arg.args[1])
+            assert isinstance(arg.args[2], Expr)
+            yield from _iter_lines(arg.args[2])
         elif arg.head in (Head.for_, Head.while_):  # = binop, block
             yield arg.args[0]
-            if isinstance(arg.args[1], Expr):
-                yield from _iter_lines(arg.args[1])
+            assert isinstance(arg.args[1], Expr)
+            yield from _iter_lines(arg.args[1])
         elif arg.head in (Head.function, Head.class_, Head.with_):
-            if isinstance(arg.args[1], Expr):
-                yield from _iter_lines(arg.args[1])
+            assert isinstance(arg.args[1], Expr)
+            yield from _iter_lines(arg.args[1])
         elif arg.head is Head.try_:
-            ...  # TODO
-        # decorator?
+            assert isinstance(arg.args[0], Expr)
+            yield from _iter_lines(arg.args[0])
+            for a in arg.args[1:-2:2]:
+                assert isinstance(a, Expr) and isinstance(a.args[0], Expr)
+                yield from _iter_lines(a.args[0])
+            _else, _finally = arg.args[-2:]
+            if isinstance(_else, Expr) and _else.head is Head.block:
+                assert isinstance(_else.args[0], Expr)
+                yield from _iter_lines(_else.args[0])
+            if isinstance(_finally, Expr) and _finally.head is Head.block:
+                assert isinstance(_finally.args[0], Expr)
+                yield from _iter_lines(_finally.args[0])
+        elif arg.head is Head.decorator:
+            assert isinstance(arg.args[1], Expr)
+            yield from _iter_lines(arg.args[1])
         else:
-            yield arg
+            if arg.head is not Head.empty:
+                yield arg
 
 
 def _check_format_mapping(mapping_list: Iterable) -> "dict[Symbol, _Expr]":
@@ -715,7 +729,7 @@ def _tuple(*args) -> tuple:
 # Stored symbols and the actual values. These will be used even after parse()
 # method, to make parse(str(macro)) executable.
 _STORED_VALUES: "dict[int, tuple[_Expr, Any]]" = {}
-
+_STORED_SYMBOLS: "WeakValueDictionary[str, Any]" = WeakValueDictionary()
 
 # Map to speed up type check
 _SUBCLASS_MAP: "dict[type, type]" = {}
@@ -787,6 +801,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
         if len(main) == 0:
             # submodules should not be registered
             _STORED_VALUES[obj_id] = (sym, obj)
+            _STORED_SYMBOLS[sym.name] = obj
         return sym
 
     if isinstance(seq, (Symbol, Expr)):
@@ -808,6 +823,7 @@ def store(obj: Any) -> _Expr:
     if not name.isidentifier():
         raise ValueError(f"{name} is not an identifier.")
     _STORED_VALUES[obj_id] = (sym, obj)
+    _STORED_SYMBOLS[sym.name] = obj
     return sym
 
 

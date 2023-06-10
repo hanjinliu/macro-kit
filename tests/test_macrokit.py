@@ -294,6 +294,21 @@ def test_fstring(s: str):
     parsed = str(parse(s0))
     assert parsed == s0
 
+@pytest.mark.parametrize(
+    "s",
+    [
+        "try:\n    f()\nexcept:\n    g()",
+        "try:\n    f()\nfinally:\n    g()",
+        "try:\n    f()\nexcept Exception:\n    g()",
+        "try:\n    f()\nexcept Exception as e:\n    g(e)",
+        "try:\n    f()\nexcept Exception:\n    g()\nfinally:\n    h()",
+        "try:\n    f()\nexcept Exception:\n    g()\nelse:\n    h()",
+        "try:\n    f()\nexcept Exception:\n    g()\nelse:\n    h()\nfinally:\n    i()",
+    ]
+)
+def test_try_except(s: str):
+    str(parse(s))
+
 def test_special_methods():
     macro = Macro(flags={"Return": False})
 

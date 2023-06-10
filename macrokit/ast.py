@@ -2,7 +2,7 @@ import ast
 import inspect
 from typing import Callable, Union, get_type_hints
 
-from macrokit.expression import Expr, Head, symbol, _STORED_VALUES
+from macrokit.expression import Expr, Head, symbol, _STORED_SYMBOLS
 from macrokit._symbol import Symbol
 
 
@@ -106,9 +106,8 @@ def _constant(ast_object: ast.Constant):
 @from_ast.register
 def _name(ast_object: ast.Name):
     name = ast_object.id
-    for sym, v in _STORED_VALUES.values():
-        if isinstance(sym, Symbol) and sym.name == name:
-            return symbol(v)
+    if name in _STORED_SYMBOLS:
+        return symbol(_STORED_SYMBOLS[name])
     return Symbol(name)
 
 

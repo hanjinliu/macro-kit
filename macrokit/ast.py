@@ -559,6 +559,14 @@ def _assert(ast_object: ast.Assert):
     return Expr(head, args)
 
 
+@from_ast.register
+def _named_expr(ast_object: ast.NamedExpr):
+    head = Head.walrus
+    target = from_ast(ast_object.target)
+    args = [target, from_ast(ast_object.value)]
+    return Expr(head, args)
+
+
 def _nest_binop(op, values: "list[ast.expr]"):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]

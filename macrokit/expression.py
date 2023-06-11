@@ -173,6 +173,7 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.star: lambda e, i: f"{_s_(i)}*{str_(e.args[0])}",
     Head.starstar: lambda e, i: f"{_s_(i)}**{str_(e.args[0])}",
     Head.decorator: lambda e, i: f"{_s_(i)}@{str_(e.args[0])}\n{_s_(i)}{e.args[1]}",
+    Head.walrus: lambda e, i: f"({str_(e.args[0])} := {str_(e.args[1])})",
 }
 
 _Expr = Union[Symbol, "Expr"]

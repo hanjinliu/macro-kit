@@ -10,6 +10,7 @@ class Head(Enum):
     del_ = "del"
     call = "call"
     assign = "assign"
+    walrus = "walrus"
     kw = "kw"
     tuple = "tuple"
     list = "list"

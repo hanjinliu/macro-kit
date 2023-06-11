@@ -49,7 +49,8 @@ def _no_arg(args):
     return args
 
 
-@validator.register(Head.del_)
+@validator.register(Head.star)
+@validator.register(Head.starstar)
 def _single_arg(args):
     if len(args) != 1:
         raise ValidationError()
@@ -101,6 +102,7 @@ def _symbol_and_any(args):
 
 
 @validator.register(Head.assign)
+@validator.register(Head.walrus)
 def _symbols_and_any(args):
     if len(args) != 2:
         raise ValidationError()
@@ -121,6 +123,7 @@ def _three_args(args):
 
 
 @validator.register(Head.function)
+@validator.register(Head.class_)
 @validator.register(Head.for_)
 @validator.register(Head.while_)
 def _an_arg_and_a_block(args):

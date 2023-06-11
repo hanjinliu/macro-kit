@@ -215,6 +215,8 @@ def test_register_type():
         "from numpy import linalg as la",
         "from numpy.linalg import norm",
         "from numpy.linalg import norm as nrm",
+        "if a: pass",
+        "if a := f(): pass",
     ]
 )
 def test_parsing_single_line(line: str):

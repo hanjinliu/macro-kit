@@ -647,19 +647,24 @@ class Expr:
             else:
                 yield from arg.iter_getattr()
 
-    def iter_call_args(
-        self,
-    ) -> "Iterator[tuple[_Expr, tuple[_Expr, ...], dict[str, _Expr]]]":
-        """Iterate over all the function call and its split."""
+    def iter_call(self) -> "Iterator[Expr]":
+        """Iterate over all the function call."""
         if self.head is Head.call:
-            yield self.split_call()
+            yield self
         for arg in self.args:
             if isinstance(arg, Symbol):
                 continue
             if arg.head is Head.call:
-                yield arg.split_call()
+                yield arg
             else:
-                yield from arg.iter_call_args()
+                yield from arg.iter_call()
+
+    def iter_call_args(
+        self,
+    ) -> "Iterator[tuple[_Expr, tuple[_Expr, ...], dict[str, _Expr]]]":
+        """Iterate over all the function call and its split."""
+        for expr in self.iter_call():
+            yield expr.split_call()
 
 
 def _iter_lines(expr: Expr) -> "Iterator[Symbol | Expr]":

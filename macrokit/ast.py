@@ -462,7 +462,7 @@ def _raise(ast_object: ast.Raise):
 
 @from_ast.register
 def _del(ast_object: ast.Delete):
-    return Expr(Head.del_, [from_ast(ast_object.targets)])
+    return Expr(Head.del_, [from_ast(t) for t in ast_object.targets])
 
 
 @from_ast.register

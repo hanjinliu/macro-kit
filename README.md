@@ -10,7 +10,7 @@ The design of AST in this package is strongly inspired by [Julia metaprogramming
 - use pip
 
 ```
-pip install macro-kit
+pip install macro-kit -U
 ```
 
 - from source
@@ -46,7 +46,7 @@ Use `format` method to rename variable names.
 ```python
 # substitute identifiers of variables
 # var0x24fdc2d1530 -> x
-macro.format([(val0, "x")]) 
+macro.format([(val0, "x")])
 ```
 ```
 [Out]
@@ -76,17 +76,17 @@ macro = Macro()
 class C:
     def __init__(self, val: int):
         self.value = val
-    
+
     @property
     def value(self):
         return self._value
-    
+
     @value.setter
     def value(self, new_value: int):
         if not isinstance(new_value, int):
             raise TypeError("new_value must be an integer.")
         self._value = new_value
-    
+
     def show(self):
         print(self._value)
 
@@ -108,7 +108,7 @@ macro.format([(c, "ins")])
 ```
 [Out]
 ins = C(1)
-ins.value = -10     
+ins.value = -10
 var0x7ffed09d2cd8 = ins.show()
 ```
 
@@ -127,7 +127,7 @@ macro.eval({"C": C})
 ```python
 import numpy as np
 macro = Macro()
-np = macro.record(np) # macro-recordable numpy
+np = macro.record(np)  # macro-recordable numpy
 
 arr = np.random.random(30)
 mean = np.mean(arr)
@@ -143,7 +143,7 @@ var0x2a0a40daef0 = numpy.mean(var0x2a0a2864090)
 Recorded module is stored in `Symbol` so you can safely `eval` the macro without passing the module object as the global variables.
 
 ```python
-macro.eval() # this works
+macro.eval()  # this works
 ```
 
 4. String parsing
@@ -158,7 +158,7 @@ expr
 ```
 ```
 [Out]
-:(result = f(0, l[slice(2, 8, None)])
+:(result = f(0, l[slice(2, 8, None)]))
 ```
 ```python
 print(expr.dump())

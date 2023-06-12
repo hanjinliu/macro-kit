@@ -26,11 +26,16 @@ def check_attributes(code: Expr, ns: dict[str, Any]) -> list[ExprCheckError]:
     """Check if the given code contains undefined attributes."""
     errors = list[ExprCheckError]()
     for line in code.iter_lines():
-        for expr in code.iter_getattr():
+        if isinstance(line, Symbol):
+            continue
+        for expr in line.iter_getattr():
             try:
                 expr.eval(ns)
             except AttributeError as e:
                 errors.append(ExprCheckError(str(e), expr, line))
+            except NameError:
+                # variables defined during the execution of the code.
+                pass
     return errors
 
 

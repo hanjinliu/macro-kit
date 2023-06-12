@@ -632,14 +632,21 @@ class Expr:
                     self.args[i] = new
         return self
 
-    def iter_lines(self) -> "Iterator[Symbol | Expr]":
+    def iter_lines(self, allow_one_line: bool = True) -> "Iterator[Symbol | Expr]":
         """Iterate over all the lines in the expression."""
         if self.head not in HAS_BLOCK:
-            raise ValueError(f"Expr of {self.head} does not have code block.")
-        return _iter_lines(self)
+            if allow_one_line:
+                yield self
+                return
+            else:
+                raise ValueError(f"Expr of {self.head} does not have code block.")
+        yield from _iter_lines(self)
 
     def iter_getattr(self) -> "Iterator[Expr]":
         """Iterate over all the get-attribute expression."""
+        if self.head is Head.getattr:
+            yield self
+            return
         for arg in self.args:
             if isinstance(arg, Symbol):
                 continue

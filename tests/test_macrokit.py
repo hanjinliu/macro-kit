@@ -289,7 +289,18 @@ def test_increment_op(op: str):
 
 @pytest.mark.parametrize(
     "s",
-    ["a{b}c", "a{b!r}c", "a{b!s}c", "a{b!a}c", "a{x:<2}", "a{x:<{y}}", "a{x:{t}^{u}}"],
+    [
+        "a{b}c",
+        "a{b!r}c",
+        "a{b!s}c",
+        "a{b!a}c",
+        "a{x:<2}",
+        "a{x:<{y}}",
+        "a{x:{t}^{u}}",
+        "a{b}{bb}",
+        "a{b.attr}{c.attr}",
+        "a{b[key]}{c[key]}",
+    ],
 )
 def test_fstring(s: str):
     s0 = "f'" + s + "'"
@@ -310,6 +321,7 @@ def test_fstring(s: str):
 )
 def test_try_except(s: str):
     str(parse(s))
+
 
 def test_special_methods():
     macro = Macro(flags={"Return": False})

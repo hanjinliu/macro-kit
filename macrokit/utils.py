@@ -22,7 +22,8 @@ class ExprCheckError(Exception):
 _BUILTIN_FUNCTION_OR_METHOD = type(print)
 
 
-def check_attributes(code: Expr, ns: dict[str, Any]) -> list[ExprCheckError]:
+# TODO: import
+def check_attributes(code: Expr, ns: dict[str, Any] = {}) -> list[ExprCheckError]:
     """Check if the given code contains undefined attributes."""
     errors = list[ExprCheckError]()
     for line in code.iter_lines():
@@ -39,7 +40,7 @@ def check_attributes(code: Expr, ns: dict[str, Any]) -> list[ExprCheckError]:
     return errors
 
 
-def check_call_args(code: Expr, ns: dict[str, Any]) -> list[ExprCheckError]:
+def check_call_args(code: Expr, ns: dict[str, Any] = {}) -> list[ExprCheckError]:
     """Check if all the function calls in the given code are valid."""
     errors = list[ExprCheckError]()
     for line in code.iter_lines():
@@ -54,7 +55,7 @@ def check_call_args(code: Expr, ns: dict[str, Any]) -> list[ExprCheckError]:
                 inspect.signature(_method).bind(*args, **kwargs)
             except TypeError as e:
                 errors.append(ExprCheckError(str(e), expr, line))
-            except ValueError:
+            except (ValueError, NameError):
                 # builtin classes such as `range`.
                 pass
     return errors

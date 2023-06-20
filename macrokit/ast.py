@@ -589,23 +589,21 @@ def _nest_joinedstr(ast_object: ast.JoinedStr):
     strs: "list[str]" = []
     for k in ast_object.values:
         if isinstance(k, ast.FormattedValue):
-            name = k.value
-            if not isinstance(name, ast.Name):
-                raise RuntimeError(f"Unknown name type: {type(name)}")
+            _id = ast.unparse(k.value)
             if k.format_spec is None:
                 if k.conversion == -1:
-                    strs.append("{" + f"{name.id}" + "}")
+                    strs.append("{" + f"{_id}" + "}")
                 elif k.conversion == 115:
-                    strs.append("{" + f"{name.id}!s" + "}")
+                    strs.append("{" + f"{_id}!s" + "}")
                 elif k.conversion == 114:
-                    strs.append("{" + f"{name.id}!r" + "}")
+                    strs.append("{" + f"{_id}!r" + "}")
                 elif k.conversion == 97:
-                    strs.append("{" + f"{name.id}!a" + "}")
+                    strs.append("{" + f"{_id}!a" + "}")
                 else:
                     raise RuntimeError(f"Unknown conversion: {k.conversion}")
             elif isinstance(k.format_spec, ast.JoinedStr):
                 fspec = _nest_joinedstr(k.format_spec)
-                strs.append("{" + f"{name.id}:{fspec}" + "}")
+                strs.append("{" + f"{_id}:{fspec}" + "}")
             else:
                 raise RuntimeError(f"Unknown format_spec type: {type(k.format_spec)}")
         elif isinstance(k, ast.Constant):

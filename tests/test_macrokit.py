@@ -462,13 +462,42 @@ def test_eval_call_args():
     assert args == (1, 2)
     assert kwargs == {"x": 3}
 
-
 def test_eval_call_args_with_namespace():
     expr = parse("f(a, b, x=c)")
     args, kwargs = expr.eval_call_args(ns=dict(a=1, b=2, c=3))
     assert args == (1, 2)
     assert kwargs == {"x": 3}
 
+@pytest.mark.parametrize(
+    "s",
+    [
+        "f()",
+        "f(1)",
+        "f(1, 2)",
+        "f(1, x=2)",
+        "f(1, 'a', x=2)",
+        "x.f()",
+        "x.f(1)",
+        "x.f(1, 2)",
+        "x.f(1, x=2)",
+        "x.f(1, 'a', x=2)",
+    ]
+)
+def test_eval_call_args_many_types(s: str):
+    parse(s).eval_call_args()
+
+
+@pytest.mark.parametrize(
+    "s",
+    [
+        "[a for a in range(4)]",
+        "{a for a in range(4)}",
+        "{a: 3 for a in range(4)}",
+    ]
+)
+def test_comprehension(s: str):
+    expr = parse(s)
+    assert expr.eval() == eval(s)
 
 def test_store():
     # A array like object

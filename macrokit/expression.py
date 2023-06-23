@@ -417,9 +417,12 @@ class Expr:
             raise ValueError(f"Expected {Head.call}, got {self.head}.")
         # search for the index where keyword argument starts
         arguments = self.args[1:]
+        i = 0
         for i, arg in enumerate(arguments):
             if isinstance(arg, Expr) and arg.head is Head.kw:
                 break
+        else:
+            i += 1
 
         _args = arguments[:i]
         _kwargs = arguments[i:]

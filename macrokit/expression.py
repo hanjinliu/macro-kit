@@ -136,14 +136,36 @@ def _import_str(x: "Expr", i: int):
     return f"{_s_(i)}{prefix}import {sjoin(', ', args, i)}"
 
 
+def _only_generator(args: "list[Expr | Symbol]") -> bool:
+    return (
+        len(args) == 1 and isinstance(args[0], Expr) and args[0].head is Head.generator
+    )
+
+
+def _list_str(x: "Expr", i: int) -> str:
+    args = x.args
+    if _only_generator(args):
+        return f"{_s_(i)}[{rm_par(str_(args[0]))}]"
+    else:
+        return f"{_s_(i)}[{', '.join(str_(arg) for arg in args)}]"
+
+
+def _braces_str(x: "Expr", i: int) -> str:
+    args = x.args
+    if _only_generator(args):
+        return f"{_s_(i)}{{{rm_par(str_(args[0]))}}}"
+    else:
+        return f"{_s_(i)}{{{', '.join(str_(arg) for arg in args)}}}"
+
+
 _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
     Head.getitem: lambda e, i: f"{str_(e.args[0], i)}[{rm_par(str_(e.args[1]))}]",
     Head.del_: lambda e, i: f"{_s_(i)}del {str_(e.args[0])}",
     Head.tuple: _tuple_str,
-    Head.list: lambda e, i: f"{_s_(i)}[{', '.join(str_(arg) for arg in e.args)}]",
-    Head.braces: lambda e, i: f"{_s_(i)}{{{', '.join(str_(arg) for arg in e.args)}}}",
+    Head.list: _list_str,
+    Head.braces: _braces_str,
     Head.call: lambda e, i: f"{str_(e.args[0], i)}({sjoin(', ', e.args[1:])})",
     Head.assign: lambda e, i: f"{str_(e.args[0], i)} = {e.args[1]}",
     Head.kw: lambda e, i: f"{str_(e.args[0])}={str_(e.args[1])}",

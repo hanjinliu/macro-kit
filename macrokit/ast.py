@@ -567,6 +567,12 @@ def _named_expr(ast_object: ast.NamedExpr):
     return Expr(head, args)
 
 
+# python < 3.9
+@from_ast.register
+def _index(ast_object: ast.Index):
+    return from_ast(ast_object.value)  # type: ignore
+
+
 def _nest_binop(op, values: "list[ast.expr]"):
     if len(values) == 2:
         return [op, from_ast(values[0]), from_ast(values[1])]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 import inspect
+import warnings
 from macrokit._symbol import Symbol
 from macrokit.expression import Expr
 
@@ -25,7 +26,7 @@ _BUILTIN_FUNCTION_OR_METHOD = type(print)
 # TODO: import
 def check_attributes(code: Expr, ns: dict[str, Any] = {}) -> list[ExprCheckError]:
     """Check if the given code contains undefined attributes."""
-    errors = list[ExprCheckError]()
+    errors: list[ExprCheckError] = []
     for line in code.iter_lines():
         if isinstance(line, Symbol):
             continue
@@ -37,12 +38,14 @@ def check_attributes(code: Expr, ns: dict[str, Any] = {}) -> list[ExprCheckError
             except NameError:
                 # variables defined during the execution of the code.
                 pass
+            except Exception as e:
+                warnings.warn(f"Unexpected exception in line {line}: {e}")
     return errors
 
 
 def check_call_args(code: Expr, ns: dict[str, Any] = {}) -> list[ExprCheckError]:
     """Check if all the function calls in the given code are valid."""
-    errors = list[ExprCheckError]()
+    errors: list[ExprCheckError] = []
     for line in code.iter_lines():
         if isinstance(line, Symbol):
             continue
@@ -58,4 +61,6 @@ def check_call_args(code: Expr, ns: dict[str, Any] = {}) -> list[ExprCheckError]
             except (ValueError, NameError):
                 # builtin classes such as `range`.
                 pass
+            except Exception as e:
+                warnings.warn(f"Unexpected exception in line {line}: {e}")
     return errors

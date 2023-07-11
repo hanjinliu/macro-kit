@@ -1,6 +1,6 @@
 """macro-kit is a package for macro recording and metaprogramming in Python."""
 
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 __author__ = "Hanjin Liu"
 __email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 

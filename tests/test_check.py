@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any
 from macrokit import parse
 from macrokit.utils import check_attributes, check_call_args

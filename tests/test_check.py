@@ -65,6 +65,16 @@ def test_check_call_args_passes(s: str, ns: dict[str, Any]):
     results = check_call_args(expr, ns)
     assert len(results) == 0
 
+def test_check_call_args_with_unknown():
+    ns = {"c": C()}
+    s = (
+        "arr = np.arange(4)\n"
+        "c.f(arr.size)"
+    )
+    expr = parse(s)
+    results = check_call_args(expr, ns)
+    assert len(results) == 0
+
 @pytest.mark.parametrize(
     "s, ns, nfail",
     [

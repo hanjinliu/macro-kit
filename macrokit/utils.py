@@ -75,7 +75,12 @@ def check_call_args(
             continue
         for expr in line.iter_call():
             fexpr, args, kwargs = expr.split_call()
-            _method = fexpr.eval(ns)
+            try:
+                _method = fexpr.eval(ns)
+            except (NameError, AttributeError):
+                # newly defined or imported variables are not avaliable.
+                # e.g. func(np.arange(3))
+                continue
             if isinstance(_method, _BUILTIN_FUNCTION_OR_METHOD):
                 continue
             try:

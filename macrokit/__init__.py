@@ -42,7 +42,6 @@ __all__ = [
     "dump",
     "get_macro",
     "set_flags",
-    "COMPILED",
 ]
 
 # global macro instance and its functions

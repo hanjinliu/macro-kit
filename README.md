@@ -1,3 +1,8 @@
+[![License BSD-3](https://img.shields.io/pypi/l/macro-kit.svg?color=green)](https://github.com/hanjinliu/macro-kit/blob/main/LICENSE)
+[![Python package index download statistics](https://img.shields.io/pypi/dm/macro-kit.svg)](https://pypistats.org/packages/macro-kit)
+[![PyPI version](https://badge.fury.io/py/macro-kit.svg)](https://badge.fury.io/py/macro-kit)
+[![Conda version](https://anaconda.org/conda-forge/macro-kit/badges/version.svg)](https://anaconda.org/conda-forge/macro-kit/badges/version.svg)
+
 # macro-kit
 
 `macro-kit` is a package for efficient macro recording and metaprogramming in Python using abstract syntax tree (AST).

@@ -544,3 +544,20 @@ def test_store_sequence():
     assert str(symbol(tup[0])) == f"{sym}[0]"
     assert str(symbol(tup[1])) == f"{sym}[1]"
     assert str(symbol(tup[2])) == f"{sym}[2]"
+
+def test_split_call():
+    fn, args, kwargs = parse("f(1, 2, x=3)").split_call()
+    assert fn == Symbol("f")
+    assert args == (symbol(1), symbol(2))
+    assert kwargs == {"x": symbol(3)}
+    expr = Expr.unsplit_call(fn, args, kwargs)
+    assert str(expr) == "f(1, 2, x=3)"
+
+def test_split_method():
+    ins, meth, args, kwargs = parse("x.f(1, 2, x=3)").split_method()
+    assert ins == Symbol("x")
+    assert meth == Symbol("f")
+    assert args == (symbol(1), symbol(2))
+    assert kwargs == {"x": symbol(3)}
+    expr = Expr.unsplit_method(ins, meth, args, kwargs)
+    assert str(expr) == "x.f(1, 2, x=3)"

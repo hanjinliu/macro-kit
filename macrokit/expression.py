@@ -194,7 +194,7 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.import_: _import_str,
     Head.star: lambda e, i: f"{_s_(i)}*{str_(e.args[0])}",
     Head.starstar: lambda e, i: f"{_s_(i)}**{str_(e.args[0])}",
-    Head.decorator: lambda e, i: f"{_s_(i)}@{str_(e.args[0])}\n{_s_(i)}{e.args[1]}",
+    Head.decorator: lambda e, i: f"{_s_(i)}@{str_(e.args[0])}\n{str_(e.args[1], i)}",
     Head.walrus: lambda e, i: f"({str_(e.args[0])} := {str_(e.args[1])})",
 }
 
@@ -386,6 +386,14 @@ class Expr:
                 args.append(arg)
         return self.args[0], tuple(args), kwargs
 
+    @classmethod
+    def unsplit_call(
+        cls, fn: "_Expr", args: tuple[_Expr, ...], kwargs: dict[str, _Expr]
+    ) -> "Expr":
+        """Unsplit ``func(*args, **kwargs)`` to (func, args, kwargs)."""
+        inputs = [fn] + cls._convert_args(args, kwargs)
+        return cls(head=Head.call, args=inputs)
+
     def split_method(
         self,
     ) -> "tuple[_Expr, Symbol, tuple[_Expr, ...], dict[str, _Expr]]":
@@ -397,6 +405,18 @@ class Expr:
         if not isinstance(attr, Symbol):
             raise RuntimeError("Unreachable in setitem expression.")
         return obj, attr, args, kwargs
+
+    @classmethod
+    def unsplit_method(
+        cls,
+        obj: "_Expr",
+        func: str,
+        args: tuple[_Expr, ...],
+        kwargs: dict[str, _Expr],
+    ) -> "Expr":
+        """Unsplit ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
+        fn = cls(Head.getattr, [obj, Symbol(func)])
+        return cls.unsplit_call(fn, args, kwargs)
 
     def eval_call_args(
         self,

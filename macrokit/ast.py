@@ -238,8 +238,9 @@ def _if(ast_object: ast.If):
     args = [
         from_ast(ast_object.test),
         from_ast(ast_object.body),
-        from_ast(ast_object.orelse),
     ]
+    if ast_object.orelse:
+        args.append(from_ast(ast_object.orelse))
     return Expr(head, args)
 
 
@@ -342,6 +343,28 @@ if sys.version_info >= (3, 10):
     def _match_or(ast_object: ast.MatchOr):
         pats = [from_ast(a) for a in ast_object.patterns]
         return Expr(Head.binop, [Symbol._reserved("|")] + pats)
+
+    @from_ast.register
+    def _match_singleton(ast_object: ast.MatchSingleton):
+        return symbol(ast_object.value)
+
+    @from_ast.register
+    def _match_sequence(ast_object: ast.MatchSequence):
+        args = [from_ast(a) for a in ast_object.patterns]
+        return Expr(Head.list, args)
+
+    @from_ast.register
+    def _match_starred(ast_object: ast.MatchStar):
+        return Expr(Head.star, [Symbol(ast_object.name)])
+
+    @from_ast.register
+    def _match_mapping(ast_object: ast.MatchMapping):
+        args = []
+        for k, v in zip(ast_object.keys, ast_object.patterns):
+            args.append(Expr(Head.annotate, [from_ast(k), from_ast(v)]))
+        if ast_object.rest:
+            args.append(Expr(Head.starstar, [Symbol(ast_object.rest)]))
+        return Expr(Head.braces, args)
 
 
 def _except_to_list(ast_object: ast.ExceptHandler) -> "list[Symbol | Expr]":

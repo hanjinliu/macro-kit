@@ -97,6 +97,14 @@ def _yield_str(x: "Expr", i: int):
     return f"{_s_(i)}yield {sjoin(', ', args)}"
 
 
+def _if_str(x: "Expr", i: int):
+    args = x.args
+    if len(args) == 2:
+        return f"{_s_(i)}if {str_(args[0])}:\n{str_(args[1], i+4)}"
+    else:
+        return f"{_s_(i)}if {str_(args[0])}:\n{str_(args[1], i+4)}\n{_s_(i)}else:\n{str_(args[2], i+4)}"  # noqa
+
+
 def _try_str(x: "Expr", i: int):
     _try = x.args[0]
     _else = x.args[-2]
@@ -190,7 +198,7 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.return_: lambda e, i: f"{_s_(i)}return {sjoin(', ', e.args)}",
     Head.yield_: _yield_str,
     Head.raise_: lambda e, i: f"{_s_(i)}raise {str_(e.args[0])}",
-    Head.if_: lambda e, i: f"{_s_(i)}if {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}\n{_s_(i)}else:\n{str_(e.args[2], i+4)}",  # noqa
+    Head.if_: _if_str,
     Head.try_: _try_str,
     Head.for_: lambda e, i: f"{_s_(i)}for {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa
     Head.while_: lambda e, i: f"{_s_(i)}while {rm_par(str_(e.args[0]))}:\n{str_(e.args[1], i+4)}",  # noqa

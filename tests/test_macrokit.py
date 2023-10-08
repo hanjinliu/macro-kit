@@ -3,7 +3,7 @@ from macrokit import (
     Expr, Macro, Symbol, parse, register_type, unregister_type, symbol,
     store, store_sequence
 )
-
+import ast
 
 def test_function():
     macro = Macro()
@@ -221,7 +221,8 @@ def test_register_type():
 )
 def test_parsing_single_line(line: str):
     expr = parse(line)
-    str(expr)
+    expr_str = str(expr)
+    ast.parse(expr_str)
 
 code1 = """
 a = np.arange(12)
@@ -251,10 +252,14 @@ def gen2():
 """
 
 def test_parsing():
-    str(parse(code1))
+    expr = parse(code1)
+    expr_str = str(expr)
+    ast.parse(expr_str)
 
 def test_functions():
-    str(parse(code2))
+    expr = parse(code2)
+    expr_str = str(expr)
+    ast.parse(expr_str)
 
 @pytest.mark.parametrize(
     "code",
@@ -268,7 +273,9 @@ def test_functions():
     ]
 )
 def test_decorator(code: str):
-    str(parse(code))
+    expr = parse(code)
+    expr_str = str(expr)
+    ast.parse(expr_str)
 
 @pytest.mark.parametrize(
     "op",
@@ -278,14 +285,14 @@ def test_decorator(code: str):
     # fmt: on
 )
 def test_binary_op(op: str):
-    str(parse(f"a {op} b"))
+    ast.parse(str(parse(f"a {op} b")))
 
 @pytest.mark.parametrize(
     "op",
     ["+", "-", "*", "/", "%", "**", "//", "@", "&", "|", "^"],
 )
 def test_increment_op(op: str):
-    str(parse(f"a {op}= b"))
+    ast.parse(str(parse(f"a {op}= b")))
 
 @pytest.mark.parametrize(
     "s",
@@ -320,7 +327,7 @@ def test_fstring(s: str):
     ]
 )
 def test_try_except(s: str):
-    str(parse(s))
+    ast.parse(str(parse(s)))
 
 
 def test_special_methods():
@@ -365,7 +372,7 @@ def test_special_methods():
     ]
 )
 def test_generators(s: str):
-    parse(s)
+    ast.parse(str(parse(s)))
 
 def test_field():
     class A:
@@ -561,3 +568,20 @@ def test_split_method():
     assert kwargs == {"x": symbol(3)}
     expr = Expr.unsplit_method(ins, meth, args, kwargs)
     assert str(expr) == "x.f(1, 2, x=3)"
+
+T = "    "
+@pytest.mark.parametrize(
+    "s",
+    [
+        f"match x:\n{T}case 0:\n{T}{T}pass\n{T}case 1:\n{T}{T}pass",
+        f"match x:\n{T}case int(x):\n{T}{T}pass\n{T}case str(y):\n{T}{T}pass",
+        f"match x:\n{T}case 'a' | 'b' | 'c':\n{T}{T}pass\n{T}case _:\n{T}{T}pass",
+        f"match p:\n{T}case P(x=0, y=0): pass\n{T}case P(x=x, y=0): pass\n{T}case P(x=0, y=y): pass\n{T}case P(x=x, y=y): pass",  # noqa: E501
+        f"match x:\n{T}case f(x) as y: pass",
+        f"match x:\n{T}case [a, b, *others]: pass",
+        f"match x:\n{T}case {{'a': _, 'b': _, **rest}}: pass",
+        f"match x:\n{T}case True: ...\n{T}case False: ...\n{T}case None: ...",
+    ]
+)
+def test_match(s: str):
+    ast.parse(str(parse(s)))

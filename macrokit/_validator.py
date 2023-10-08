@@ -114,7 +114,6 @@ def _symbols_and_any(args):
     return [k, v]
 
 
-@validator.register(Head.binop)
 @validator.register(Head.aug)
 def _three_args(args):
     if len(args) != 3:
@@ -130,16 +129,6 @@ def _an_arg_and_a_block(args):
     if len(args) != 2:
         raise ValidationError()
     b = args[1]
-    if getattr(b, "head", None) != Head.block:
-        raise ValidationError()
-    return args
-
-
-@validator.register(Head.if_)
-def _two_args_and_a_block(args):
-    if len(args) != 3:
-        raise ValidationError()
-    b = args[2]
     if getattr(b, "head", None) != Head.block:
         raise ValidationError()
     return args

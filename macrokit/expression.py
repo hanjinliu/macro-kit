@@ -136,6 +136,14 @@ def _import_str(x: "Expr", i: int):
     return f"{_s_(i)}{prefix}import {sjoin(', ', args, i)}"
 
 
+def _case_str(x: "Expr", i: int):
+    args = x.args
+    if len(args) == 2:
+        return f"{_s_(i)}case {str_(args[0])}:\n{str_(args[1], i+4)}"
+    else:
+        return f"{_s_(i)}case {str_(args[0])} {str_(args[2])}:\n{str_(args[1], i+4)}"
+
+
 def _only_generator(args: "list[Expr | Symbol]") -> bool:
     return (
         len(args) == 1 and isinstance(args[0], Expr) and args[0].head is Head.generator
@@ -158,6 +166,8 @@ def _braces_str(x: "Expr", i: int) -> str:
         return f"{_s_(i)}{{{', '.join(str_(arg) for arg in args)}}}"
 
 
+_NL = "\n"
+
 _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.empty: lambda e, i: "",
     Head.getattr: lambda e, i: f"{str_(e.args[0], i)}.{str_(e.args[1])}",
@@ -172,7 +182,7 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.assert_: _assert_str,
     Head.comment: lambda e, i: f"{_s_(i)}# {e.args[0]}",
     Head.unop: lambda e, i: f"{_s_(i)}({str_(e.args[0])}{str_(e.args[1])})",
-    Head.binop: lambda e, i: f"{_s_(i)}({str_(e.args[1])} {str_(e.args[0])} {str_(e.args[2])})",  # noqa
+    Head.binop: lambda e, i: f"{_s_(i)}({(' ' + str_(e.args[0]) + ' ').join(str_(a) for a in e.args[1:])})",  # noqa
     Head.aug: lambda e, i: f"{_s_(i)}{str_(e.args[1])} {str_(e.args[0])}= {str_(e.args[2])}",  # noqa
     Head.block: lambda e, i: sjoin("\n", e.args, i),
     Head.function: lambda e, i: f"{_s_(i)}def {str_(e.args[0])}:\n{str_(e.args[1], i+4)}",  # noqa
@@ -196,6 +206,8 @@ _STR_MAP: "dict[Head, Callable[[Expr, int], str]]" = {
     Head.starstar: lambda e, i: f"{_s_(i)}**{str_(e.args[0])}",
     Head.decorator: lambda e, i: f"{_s_(i)}@{str_(e.args[0])}\n{str_(e.args[1], i)}",
     Head.walrus: lambda e, i: f"({str_(e.args[0])} := {str_(e.args[1])})",
+    Head.match: lambda e, i: f"{_s_(i)}match {str_(e.args[0])}:\n{_NL.join(str_(a, i+4) for a in e.args[1:])}",  # noqa
+    Head.case: _case_str,  # noqa
 }
 
 _Expr = Union[Symbol, "Expr"]
@@ -252,10 +264,10 @@ class Expr:
             out.append(f"{i:>{ind+2}}: {value}\n")
         return "".join(out)
 
-    def dump(self) -> str:
+    def dump(self) -> "PrettyString":
         """Dump expression into a tree."""
         s = self._dump()
-        return s.rstrip("\n") + "\n"
+        return PrettyString(s.rstrip("\n") + "\n")
 
     def copy(self) -> "Expr":
         """Copy Expr object."""
@@ -908,6 +920,13 @@ def object_stored_at(id: int) -> Any:
 def symbol_stored_at(id: int) -> _Expr:
     """Return the Symbol object stored at the given ID."""
     return _STORED_VALUES[id][0]
+
+
+class PrettyString(str):
+    """Just for showing the dumped expression."""
+
+    def _repr_pretty_(self, p, cycle):
+        p.text(self)
 
 
 register_type(tuple, lambda e: Expr(Head.tuple, [symbol(a) for a in e]))

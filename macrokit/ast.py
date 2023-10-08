@@ -1,4 +1,5 @@
 import ast
+import sys
 import inspect
 from typing import Any, Callable, Union, get_type_hints
 
@@ -220,8 +221,8 @@ def _binop(ast_object: ast.BinOp):
 def _boolop(ast_object: ast.BoolOp):
     head = Head.binop
     op = AST_BINOP_MAP[type(ast_object.op)]
-    args = _nest_binop(op, ast_object.values)
-    return Expr(head, args)
+    args = [from_ast(a) for a in ast_object.values]
+    return Expr(head, [op] + args)
 
 
 @from_ast.register
@@ -290,6 +291,57 @@ def _try(ast_object: ast.Try):
         args.append(Expr.empty())
 
     return Expr(head, args)
+
+
+if sys.version_info >= (3, 10):
+
+    @from_ast.register
+    def _match(ast_object: ast.Match):
+        head = Head.match
+        args = [from_ast(ast_object.subject)]
+        for k in ast_object.cases:
+            args.append(from_ast(k))
+        return Expr(head, args)
+
+    @from_ast.register
+    def _case(ast_object: ast.match_case):
+        head = Head.case
+        args = [from_ast(ast_object.pattern)]
+        args.append(from_ast(ast_object.body))
+        if ast_object.guard is not None:
+            args.append(Expr(Head.filter, [from_ast(ast_object.guard)]))
+        return Expr(head, args)
+
+    @from_ast.register
+    def _match_value(ast_object: ast.MatchValue):
+        return from_ast(ast_object.value)
+
+    @from_ast.register
+    def _match_as(ast_object: ast.MatchAs):
+        if ast_object.pattern is not None:
+            return Expr(
+                Head.as_, [from_ast(ast_object.pattern), Symbol(ast_object.name)]
+            )
+        return Symbol(ast_object.name)
+
+    @from_ast.register
+    def _match_class(ast_object: ast.MatchClass):
+        kwargs = []
+        for a, p in zip(ast_object.kwd_attrs, ast_object.kwd_patterns):
+            kwargs.append(Expr(Head.kw, [Symbol(a), from_ast(p)]))
+
+        expr = Expr(
+            Head.call,
+            [from_ast(ast_object.cls)]
+            + [from_ast(p) for p in ast_object.patterns]
+            + kwargs,
+        )
+        return expr
+
+    @from_ast.register
+    def _match_or(ast_object: ast.MatchOr):
+        pats = [from_ast(a) for a in ast_object.patterns]
+        return Expr(Head.binop, [Symbol._reserved("|")] + pats)
 
 
 def _except_to_list(ast_object: ast.ExceptHandler) -> "list[Symbol | Expr]":
@@ -567,17 +619,11 @@ def _named_expr(ast_object: ast.NamedExpr):
     return Expr(head, args)
 
 
-# python < 3.9
-@from_ast.register
-def _index(ast_object: ast.Index):
-    return from_ast(ast_object.value)  # type: ignore
+if sys.version_info < (3, 9):
 
-
-def _nest_binop(op, values: "list[ast.expr]"):
-    if len(values) == 2:
-        return [op, from_ast(values[0]), from_ast(values[1])]
-    else:
-        return [op, from_ast(values[0]), Expr(Head.binop, _nest_binop(op, values[1:]))]
+    @from_ast.register
+    def _index(ast_object: ast.Index):
+        return from_ast(ast_object.value)  # type: ignore
 
 
 def _nest_compare(ops: "list[ast.cmpop]", values: "list[ast.expr]"):

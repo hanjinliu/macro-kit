@@ -41,6 +41,8 @@ class Head(Enum):
     star = "star"
     starstar = "starstar"
     decorator = "decorator"
+    match = "match"
+    case = "case"
 
 
 EXEC = {
@@ -62,6 +64,7 @@ EXEC = {
     Head.with_,
     Head.class_,
     Head.try_,
+    Head.match,
 }
 
 HAS_BLOCK = {
@@ -73,4 +76,5 @@ HAS_BLOCK = {
     Head.class_,
     Head.with_,
     Head.try_,
+    Head.case,
 }

@@ -11,6 +11,14 @@ from typing import (
     Optional,
 )
 
+
+def _float_str(x: float) -> str:
+    out = str(x)
+    if out in ("inf", "-inf", "nan"):
+        return f"float('{out}')"
+    return out
+
+
 # Map of how to convert object into a symbol.
 _TYPE_MAP: Dict[type, Callable[[Any], str]] = {
     type: lambda e: e.__name__,
@@ -23,7 +31,7 @@ _TYPE_MAP: Dict[type, Callable[[Any], str]] = {
     str: repr,
     bytes: repr,
     int: str,
-    float: str,
+    float: _float_str,
     complex: str,
     bool: str,
 }

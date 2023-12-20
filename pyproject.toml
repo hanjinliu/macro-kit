@@ -34,3 +34,8 @@ path = "macrokit/__init__.py"
 include = [
     "/macrokit",
 ]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "/macrokit",
+]

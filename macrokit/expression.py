@@ -408,7 +408,7 @@ class Expr:
 
     @classmethod
     def unsplit_call(
-        cls, fn: "_Expr", args: tuple[_Expr, ...], kwargs: dict[str, _Expr]
+        cls, fn: "_Expr", args: "tuple[_Expr, ...]", kwargs: "dict[str, _Expr]"
     ) -> "Expr":
         """Unsplit ``func(*args, **kwargs)`` to (func, args, kwargs)."""
         inputs = [fn] + cls._convert_args(args, kwargs)
@@ -468,7 +468,7 @@ class Expr:
         _kwargs = arguments[i:]
 
         # prepare namespaces
-        args_ns: dict[Union[str, _Expr], Any] = ns.copy()
+        args_ns: "dict[Union[str, _Expr], Any]" = ns.copy()
         args_ns[symbol(_tuple)] = _tuple
         kwargs_ns = ns.copy()
 

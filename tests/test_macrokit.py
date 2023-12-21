@@ -3,6 +3,7 @@ from macrokit import (
     Expr, Macro, Symbol, parse, register_type, unregister_type, symbol,
     store, store_sequence
 )
+import sys
 import ast
 
 def test_function():
@@ -570,6 +571,7 @@ def test_split_method():
     assert str(expr) == "x.f(1, 2, x=3)"
 
 T = "    "
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="requires python3.10")
 @pytest.mark.parametrize(
     "s",
     [

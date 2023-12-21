@@ -38,4 +38,6 @@ jobs:
       - name: Test
         uses: aganders3/headless-gui@v1
         with:
-          run: hatch -v run test:run
+          run: |
+            python -m pip install .[testing] --upgrade hatch
+            hatch -v run test:run

@@ -295,6 +295,7 @@ def test_binary_op(op: str):
 def test_increment_op(op: str):
     ast.parse(str(parse(f"a {op}= b")))
 
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="ast.unparse not available")
 @pytest.mark.parametrize(
     "s",
     [

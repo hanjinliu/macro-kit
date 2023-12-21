@@ -408,7 +408,7 @@ class Expr:
 
     @classmethod
     def unsplit_call(
-        cls, fn: "_Expr", args: tuple[_Expr, ...], kwargs: dict[str, _Expr]
+        cls, fn: "_Expr", args: "tuple[_Expr, ...]", kwargs: "dict[str, _Expr]"
     ) -> "Expr":
         """Unsplit ``func(*args, **kwargs)`` to (func, args, kwargs)."""
         inputs = [fn] + cls._convert_args(args, kwargs)
@@ -431,8 +431,8 @@ class Expr:
         cls,
         obj: "_Expr",
         func: str,
-        args: tuple[_Expr, ...],
-        kwargs: dict[str, _Expr],
+        args: "tuple[_Expr, ...]",
+        kwargs: "dict[str, _Expr]",
     ) -> "Expr":
         """Unsplit ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
         fn = cls(Head.getattr, [obj, Symbol(func)])
@@ -468,7 +468,7 @@ class Expr:
         _kwargs = arguments[i:]
 
         # prepare namespaces
-        args_ns: dict[Union[str, _Expr], Any] = ns.copy()
+        args_ns: "dict[Union[str, _Expr], Any]" = ns.copy()
         args_ns[symbol(_tuple)] = _tuple
         kwargs_ns = ns.copy()
 
@@ -580,7 +580,7 @@ class Expr:
                 return True
         return False
 
-    def iter_args(self) -> Iterator[Symbol]:
+    def iter_args(self) -> "Iterator[Symbol]":
         """Recursively iterate along all the arguments."""
         for arg in self.args:
             if isinstance(arg, Expr):
@@ -590,7 +590,7 @@ class Expr:
             else:
                 raise RuntimeError(f"{arg} (type {type(arg)})")
 
-    def iter_expr(self) -> Iterator["Expr"]:
+    def iter_expr(self) -> "Iterator[Expr]":
         """
         Recursively iterate over all the nested Expr, until reaching to non-nested Expr.
 

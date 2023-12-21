@@ -580,7 +580,7 @@ class Expr:
                 return True
         return False
 
-    def iter_args(self) -> Iterator[Symbol]:
+    def iter_args(self) -> "Iterator[Symbol]":
         """Recursively iterate along all the arguments."""
         for arg in self.args:
             if isinstance(arg, Expr):
@@ -590,7 +590,7 @@ class Expr:
             else:
                 raise RuntimeError(f"{arg} (type {type(arg)})")
 
-    def iter_expr(self) -> Iterator["Expr"]:
+    def iter_expr(self) -> "Iterator[Expr]":
         """
         Recursively iterate over all the nested Expr, until reaching to non-nested Expr.
 

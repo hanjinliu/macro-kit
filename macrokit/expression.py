@@ -431,8 +431,8 @@ class Expr:
         cls,
         obj: "_Expr",
         func: str,
-        args: tuple[_Expr, ...],
-        kwargs: dict[str, _Expr],
+        args: "tuple[_Expr, ...]",
+        kwargs: "dict[str, _Expr]",
     ) -> "Expr":
         """Unsplit ``obj.func(*args, **kwargs)`` to (obj, func, args, kwargs)."""
         fn = cls(Head.getattr, [obj, Symbol(func)])

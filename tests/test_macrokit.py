@@ -252,6 +252,12 @@ def gen2():
     yield from gen(1)
 """
 
+code3 = """
+_T = TypeVarTuple("_T")
+class A(Generic[*_T]):
+    pass
+"""
+
 def test_parsing():
     expr = parse(code1)
     expr_str = str(expr)
@@ -259,6 +265,11 @@ def test_parsing():
 
 def test_functions():
     expr = parse(code2)
+    expr_str = str(expr)
+    ast.parse(expr_str)
+
+def test_class_generic():
+    expr = parse(code3)
     expr_str = str(expr)
     ast.parse(expr_str)
 

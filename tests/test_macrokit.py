@@ -1,10 +1,20 @@
-import pytest
-from macrokit import (
-    Expr, Macro, Symbol, parse, register_type, unregister_type, symbol,
-    store, store_sequence
-)
-import sys
 import ast
+import sys
+
+import pytest
+
+from macrokit import (
+    Expr,
+    Macro,
+    Symbol,
+    parse,
+    register_type,
+    store,
+    store_sequence,
+    symbol,
+    unregister_type,
+)
+
 
 def test_function():
     macro = Macro()
@@ -95,7 +105,7 @@ def test_format():
     val0 = str_add(1, 2)
     val1 = str_add(val0, "xyz")
     macro_str = str(macro.format([(val0, Symbol("X")), (val1, Symbol("Y"))]))
-    assert macro_str == "X = str_add(1, 2)\n" "Y = str_add(X, 'xyz')"
+    assert macro_str == "X = str_add(1, 2)\nY = str_add(X, 'xyz')"
 
 
 def test_class():
@@ -268,6 +278,7 @@ def test_functions():
     expr_str = str(expr)
     ast.parse(expr_str)
 
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="TypeVarTuple is not available")
 def test_class_generic():
     expr = parse(code3)
     expr_str = str(expr)
@@ -392,7 +403,7 @@ def test_field():
         m = Macro(flags={"Return": False})
 
         def __init__(self):
-            self.m  # activate field
+            self.m  # activate field  # noqa: B018
 
         @m.record
         def f(self, a, b):
@@ -408,12 +419,12 @@ def test_field():
 
     a = A()
     a.f(0, 1)
-    a.value
+    a.value  # noqa: B018
     a.value = 5
     a.value = 6
 
     macro_str = str(a.m.format([(a, "a")]))
-    assert macro_str == "a.f(0, 1)\n" "a.value\n" "a.value = 6"
+    assert macro_str == "a.f(0, 1)\na.value\na.value = 6"
 
 
 def test_at():
@@ -484,7 +495,7 @@ def test_eval_call_args():
 
 def test_eval_call_args_with_namespace():
     expr = parse("f(a, b, x=c)")
-    args, kwargs = expr.eval_call_args(ns=dict(a=1, b=2, c=3))
+    args, kwargs = expr.eval_call_args(ns={"a": 1, "b": 2, "c": 3})
     assert args == (1, 2)
     assert kwargs == {"x": 3}
 

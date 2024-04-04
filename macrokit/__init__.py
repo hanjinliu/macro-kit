@@ -1,24 +1,25 @@
 """macro-kit is a package for macro recording and metaprogramming in Python."""
 
-__version__ = "0.4.8"
+__version__ = "0.4.9"
 __author__ = "Hanjin Liu"
 __email__ = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp"
 
+from functools import wraps
+
 from macrokit._symbol import Symbol
+from macrokit.ast import parse
 from macrokit.expression import (
     Expr,
     Head,
-    symbol,
-    store_sequence,
-    store,
     object_stored_at,
+    store,
+    store_sequence,
+    symbol,
     symbol_stored_at,
 )
-from macrokit.macro import Macro, MacroFlags, BaseMacro
+from macrokit.macro import BaseMacro, Macro, MacroFlags
 from macrokit.mock import Mock
-from macrokit.ast import parse
-from macrokit.type_map import register_type, unregister_type, type_registered
-from functools import wraps
+from macrokit.type_map import register_type, type_registered, unregister_type
 
 __all__ = [
     "Symbol",

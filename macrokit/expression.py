@@ -750,7 +750,7 @@ def _iter_lines(expr: Expr) -> "Iterator[Symbol | Expr]":
             yield arg.args[0]
             assert isinstance(arg.args[1], Expr)
             yield from _iter_lines(arg.args[1])
-            if len(arg.args) > 1:
+            if len(arg.args) > 2:
                 a2 = arg.args[2]
                 if isinstance(a2, Expr):
                     yield from _iter_lines(a2)

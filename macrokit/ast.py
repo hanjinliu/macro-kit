@@ -85,7 +85,7 @@ class singledispatch:
 
 
 @singledispatch
-def from_ast(ast_object: ast.AST | list | None):
+def from_ast(ast_object: "ast.AST | list | None"):
     """Convert AST object to macro-kit object."""
     raise NotImplementedError(f"AST type {type(ast_object)} cannot be converted now.")
 

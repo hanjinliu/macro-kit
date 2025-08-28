@@ -113,7 +113,7 @@ class MacroFlagOptions(TypedDict, total=False):
 # classes
 
 
-class BaseMacro(Expr, MutableSequence[Symbol | Expr]):
+class BaseMacro(Expr, MutableSequence["Symbol | Expr"]):
     """
     A special form of an expression with header "block".
 

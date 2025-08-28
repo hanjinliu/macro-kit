@@ -10,7 +10,7 @@ from macrokit.expression import _STORED_SYMBOLS, Expr, Head, symbol
 if sys.version_info < (3, 10):
 
     def zip(*args, strict=False):
-        return builtins.zip(*args, strict=False)
+        return builtins.zip(*args)  # noqa
 
 
 LAMBDA = Symbol._reserved("<lambda>")

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
 import builtins
+from typing import Any
 
+from macrokit._symbol import Symbol
 from macrokit.expression import Expr
 from macrokit.head import Head
 from macrokit.macro import BINOP_MAP, UNOP_MAP
-from macrokit._symbol import Symbol
 from macrokit.type_map import register_type
 
 
@@ -16,15 +16,13 @@ def _mock_to_expr(mock: Mock):
 
 @register_type(_mock_to_expr)
 class Mock:
-    """
-    Helper class for easier Expr object handling.
+    """Helper class for easier Expr object handling.
 
     Instead of writing like ``Expr("getattr", [a, b])``, Mock object can do it.
 
     >>> mock = Mock("a")
     >>> mock.b  # Mock<a.b>
     >>> mock.method(arg=10)  # Mock<a.method(arg=10)>
-
     """
 
     def __init__(self, sym: Symbol | Expr | str):

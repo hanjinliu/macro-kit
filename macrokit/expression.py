@@ -12,7 +12,6 @@ from typing import (
     Union,
     overload,
 )
-from weakref import WeakValueDictionary
 
 from macrokit._symbol import Symbol
 from macrokit._validator import validator
@@ -372,7 +371,7 @@ class Expr:
     @classmethod
     def parse_call(
         cls,
-        func: Callable | _Expr,
+        func: "Callable | _Expr",
         args: "tuple[Any, ...] | None" = None,
         kwargs: "dict[str, Any] | None" = None,
     ) -> "Expr":
@@ -815,7 +814,7 @@ def _tuple(*args) -> tuple:
 # Stored symbols and the actual values. These will be used even after parse()
 # method, to make parse(str(macro)) executable.
 _STORED_VALUES: "dict[int, tuple[_Expr, Any]]" = {}
-_STORED_SYMBOLS: "WeakValueDictionary[str, Any]" = WeakValueDictionary()
+_STORED_SYMBOLS: "dict[str, Any]" = {}
 
 # Map to speed up type check
 _SUBCLASS_MAP: "dict[type, type]" = {}

@@ -42,7 +42,7 @@ AST_UNOP_MAP = {
 }
 
 
-def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
+def parse(source: "str | Callable", squeeze: bool = True) -> "Expr | Symbol":
     """Convert Python code string into Expr/Symbol objects."""
     if callable(source):
         source = inspect.getsource(source)
@@ -59,7 +59,7 @@ def parse(source: str | Callable, squeeze: bool = True) -> Expr | Symbol:
     return out
 
 
-_ParseFunc = Callable[[Any], Symbol | Expr]
+_ParseFunc = Callable[[Any], "Symbol | Expr"]
 
 
 class singledispatch:

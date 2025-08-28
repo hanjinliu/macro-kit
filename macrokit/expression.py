@@ -933,6 +933,16 @@ def symbol_stored_at(id: int) -> _Expr:
     return _STORED_VALUES[id][0]
 
 
+def init_stored():
+    """Initialize all the stored symbols and values."""
+    _STORED_VALUES.clear()
+    _STORED_SYMBOLS.clear()
+    for name, obj in builtins.__dict__.items():
+        if name.startswith("_") or isinstance(obj, ModuleType):
+            continue
+        _STORED_VALUES[id(obj)] = (symbol(obj), obj)
+
+
 class PrettyString(str):
     """Just for showing the dumped expression."""
 
@@ -974,7 +984,4 @@ register_type(slice, lambda e: Expr(Head.call, [slice, e.start, e.stop, e.step])
 register_type(range, lambda e: Expr(Head.call, [range, e.start, e.stop, e.step]))
 
 # install builtin variables
-for name, obj in builtins.__dict__.items():
-    if name.startswith("_") or isinstance(obj, ModuleType):
-        continue
-    _STORED_VALUES[id(obj)] = (symbol(obj), obj)
+init_stored()

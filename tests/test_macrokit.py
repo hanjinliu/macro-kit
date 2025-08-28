@@ -14,6 +14,7 @@ from macrokit import (
     symbol,
     unregister_type,
 )
+from macrokit.expression import init_stored
 
 
 def test_function():
@@ -39,6 +40,7 @@ def test_function():
 
 
 def test_module():
+    init_stored()
     import pandas as pd
 
     macro = Macro()
@@ -60,6 +62,7 @@ def test_module():
         "df1 = pandas.DataFrame({'a': [8, 4, -1], 'b': [True, True, False]})"
     )
 
+    init_stored()
     import numpy as np
 
     macro = Macro()
@@ -73,6 +76,7 @@ def test_module():
     macro_str = str(macro.format([(img, Symbol("img"))]))
     assert macro_str == "img = numpy.random.normal(size=(128, 128))"
 
+    init_stored()
     macro = Macro()
     df_ = Expr("getattr", [pd, pd.DataFrame])
     ds_ = Expr("getattr", [pd, pd.Series])
@@ -96,6 +100,7 @@ def test_module():
 
 
 def test_format():
+    init_stored()
     macro = Macro()
 
     @macro.record
@@ -109,6 +114,7 @@ def test_format():
 
 
 def test_class():
+    init_stored()
     macro = Macro(flags={"Return": False})
 
     @macro.record
@@ -160,6 +166,7 @@ def test_class():
 
 
 def test_register_type():
+    init_stored()
     import numpy as np
 
     macro = Macro()
@@ -399,6 +406,7 @@ def test_generators(s: str):
     ast.parse(str(parse(s)))
 
 def test_field():
+    init_stored()
     class A:
         m = Macro(flags={"Return": False})
 
@@ -456,6 +464,7 @@ def test_split_getitem():
 
 
 def test_module_update():
+    init_stored()
     import time as tm
 
     time_ = symbol(tm)
@@ -531,6 +540,7 @@ def test_comprehension(s: str):
     assert expr.eval() == eval(s)
 
 def test_store():
+    init_stored()
     # A array like object
     class X:
         def __init__(self, val):
@@ -568,6 +578,7 @@ def test_store():
 
 
 def test_store_sequence():
+    init_stored()
     class X:
         pass
 

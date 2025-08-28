@@ -1,10 +1,17 @@
 import ast
+import builtins
 import inspect
 import sys
 from typing import Any, Callable, get_type_hints
 
 from macrokit._symbol import Symbol
 from macrokit.expression import _STORED_SYMBOLS, Expr, Head, symbol
+
+if sys.version_info < (3, 10):
+
+    def zip(*args, strict=False):
+        return builtins.zip(*args, strict=False)
+
 
 LAMBDA = Symbol._reserved("<lambda>")
 

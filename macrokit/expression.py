@@ -32,7 +32,7 @@ def str_lmd(expr: Any, indent: int = 0):
     """Convert str into a proper lambda function definition."""
     s = str(expr)
     if s.startswith("<lambda>(") and s.endswith(")"):
-        call = s[7:-1]
+        call = s[9:-1]
     else:
         call = s
     return " " * indent + f"lambda {call}"

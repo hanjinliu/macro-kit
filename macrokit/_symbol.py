@@ -10,7 +10,7 @@ class Symbol:
     # ID of global variables
     _variables: set[int] = set()
 
-    def __init__(self, seq: Any, object_id: int | None = None):
+    def __init__(self, seq: Any, object_id: "int | None" = None):
         self._name = str(seq)
         self.object_id = object_id or id(seq)
         self.constant = True

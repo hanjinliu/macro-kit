@@ -562,6 +562,8 @@ def test_store():
 
     _fn_x_expr = Expr.parse_call(_fn, (x,))
     out = _fn_x_expr.eval()
+    assert isinstance(x + 1, X)
+    assert isinstance(out, X)
     assert out == x + 1
 
 

@@ -35,8 +35,7 @@ class Symbol:
         self._name = newname
 
     def eval(self, _globals: dict = {}, _locals: dict = {}) -> Any:
-        """
-        Evaluate symbol.
+        """Evaluate symbol.
 
         Parameters
         ----------
@@ -80,8 +79,7 @@ class Symbol:
 
     @classmethod
     def var(cls, identifier: str):
-        """
-        Make a variable symbol.
+        """Make a variable symbol.
 
         Same indentifier with same type always returns identical symbol.
         """

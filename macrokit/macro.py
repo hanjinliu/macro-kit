@@ -7,6 +7,7 @@ from functools import partial, wraps
 from importlib import import_module
 from types import FunctionType, MethodType, ModuleType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Iterable,
@@ -14,16 +15,19 @@ from typing import (
     MutableSequence,
     NamedTuple,
     TypeVar,
-    Union,
     overload,
 )
 
 from typing_extensions import TypedDict
 
+from macrokit._symbol import Symbol
 from macrokit.ast import parse
 from macrokit.expression import EXEC, Expr, Head, symbol
 from macrokit.type_map import register_type
-from macrokit._symbol import Symbol
+
+if TYPE_CHECKING:
+    MetaCallable = Callable[[Expr], Expr] | Callable[[Expr, Any], Expr]
+    Recordable = property | Callable | type | ModuleType
 
 _NON_RECORDABLE = (
     "__new__",
@@ -93,10 +97,6 @@ class MacroFlags(NamedTuple):
 
 
 # types
-
-
-MetaCallable = Union[Callable[[Expr], Expr], Callable[[Expr, Any], Expr]]
-Recordable = Union[property, Callable, type, ModuleType]
 _O = TypeVar("_O")
 _Class = TypeVar("_Class", bound=type)
 
@@ -113,7 +113,7 @@ class MacroFlagOptions(TypedDict, total=False):
 # classes
 
 
-class BaseMacro(Expr, MutableSequence[Union[Symbol, Expr]]):
+class BaseMacro(Expr, MutableSequence["Symbol | Expr"]):
     """
     A special form of an expression with header "block".
 
@@ -183,7 +183,7 @@ class BaseMacro(Expr, MutableSequence[Union[Symbol, Expr]]):
             cb(expr_)
         return None
 
-    def pop(self, index: int = -1) -> Union[Symbol, Expr]:
+    def pop(self, index: int = -1) -> Symbol | Expr:
         """Pop expression from macro."""
         expr = super().pop(index)
         for cb in self._on_popped:
@@ -320,43 +320,38 @@ class Macro(BaseMacro):
 
     @overload
     def record(
-        self, obj: property, *, returned_callback: MetaCallable = None
-    ) -> mProperty:
-        ...
+        self, obj: property, *, returned_callback: MetaCallable | None = None
+    ) -> mProperty: ...
 
     @overload
     def record(
-        self, obj: ModuleType, *, returned_callback: MetaCallable = None
-    ) -> mModule:
-        ...
+        self, obj: ModuleType, *, returned_callback: MetaCallable | None = None
+    ) -> mModule: ...
 
     @overload
     def record(
-        self, obj: MethodType, *, returned_callback: MetaCallable = None
-    ) -> mFunction | mClassMethod:
-        ...
-
-    @overload
-    def record(self, obj: _Class, *, returned_callback: MetaCallable = None) -> _Class:
-        ...
+        self, obj: MethodType, *, returned_callback: MetaCallable | None = None
+    ) -> mFunction | mClassMethod: ...
 
     @overload
     def record(
-        self, obj: FunctionType, *, returned_callback: MetaCallable = None
-    ) -> mFunction:
-        ...
+        self, obj: _Class, *, returned_callback: MetaCallable | None = None
+    ) -> _Class: ...
 
     @overload
     def record(
-        self, obj: classmethod, *, returned_callback: MetaCallable = None
-    ) -> mClassMethod:
-        ...
+        self, obj: FunctionType, *, returned_callback: MetaCallable | None = None
+    ) -> mFunction: ...
 
     @overload
     def record(
-        self, *, returned_callback: MetaCallable = None
-    ) -> Callable[[Recordable], mObject | MacroMixin]:
-        ...
+        self, obj: classmethod, *, returned_callback: MetaCallable | None = None
+    ) -> mClassMethod: ...
+
+    @overload
+    def record(
+        self, *, returned_callback: MetaCallable | None = None
+    ) -> Callable[[Recordable], mObject | MacroMixin]: ...
 
     def record(self, obj=None, *, returned_callback=None):
         """
@@ -370,11 +365,11 @@ class Macro(BaseMacro):
             A function that will called after new expression is appended. Must take an
             expression or an expression with the last returned value as inputs.
         """
-        kwargs = dict(
-            macro=self,
-            returned_callback=returned_callback,
-            record_returned=self._flags.Return,
-        )
+        kwargs = {
+            "macro": self,
+            "returned_callback": returned_callback,
+            "record_returned": self._flags.Return,
+        }
 
         def wrapper(_obj):
             if isinstance(_obj, property):
@@ -403,7 +398,7 @@ class Macro(BaseMacro):
 
         return wrapper if obj is None else wrapper(obj)
 
-    def _record_methods(self, cls: type, returned_callback: MetaCallable = None):
+    def _record_methods(self, cls: type, returned_callback: MetaCallable | None = None):
         _dict: dict[str, mObject | MacroMixin] = {}
         for name, attr in inspect.getmembers(cls):
             if name in _NON_RECORDABLE:
@@ -595,7 +590,7 @@ class mCallable(mObject):
         self,
         function: Callable,
         macro: Macro,
-        returned_callback: MetaCallable = None,
+        returned_callback: MetaCallable | None = None,
         namespace: Symbol | Expr | None = None,
         record_returned: bool = True,
     ):
@@ -655,7 +650,7 @@ class mFunction(mCallable):
         self,
         function: Callable,
         macro: Macro,
-        returned_callback: MetaCallable = None,
+        returned_callback: MetaCallable | None = None,
         namespace: Symbol | Expr | None = None,
         record_returned: bool = True,
     ):
@@ -811,7 +806,7 @@ class mClassMethod(mCallable):
         self,
         function: MethodType,
         macro: Macro,
-        returned_callback: MetaCallable = None,
+        returned_callback: MetaCallable | None = None,
         namespace: Symbol | Expr | None = None,
         record_returned: bool = True,
     ):
@@ -834,7 +829,7 @@ class mProperty(mObject, property):
         self,
         prop: property,
         macro: Macro,
-        returned_callback: MetaCallable = None,
+        returned_callback: MetaCallable | None = None,
         namespace: Symbol | Expr | None = None,
         flags: MacroFlagOptions = {},
     ):
@@ -958,7 +953,7 @@ class mModule(mObject):
         self,
         obj,
         macro: Macro,
-        returned_callback: MetaCallable = None,
+        returned_callback: MetaCallable | None = None,
         namespace: Symbol | Expr | None = None,
         record_returned: bool = True,
     ) -> None:

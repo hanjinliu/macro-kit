@@ -1,13 +1,18 @@
 import ast
-import sys
+import builtins
 import inspect
-from typing import Any, Callable, Union, get_type_hints
+import sys
+from typing import Any, Callable, get_type_hints
 
-from macrokit.expression import Expr, Head, symbol, _STORED_SYMBOLS
 from macrokit._symbol import Symbol
+from macrokit.expression import _STORED_SYMBOLS, Expr, Head, symbol
+
+if sys.version_info < (3, 10):
+
+    def zip(*args, strict=False):
+        return builtins.zip(*args)  # noqa
 
 
-NoneType = type(None)
 LAMBDA = Symbol._reserved("<lambda>")
 
 AST_BINOP_MAP = {
@@ -44,12 +49,12 @@ AST_UNOP_MAP = {
 }
 
 
-def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Symbol]:
+def parse(source: "str | Callable", squeeze: bool = True) -> "Expr | Symbol":
     """Convert Python code string into Expr/Symbol objects."""
     if callable(source):
         source = inspect.getsource(source)
     body = ast.parse(source).body
-    ast_object: "Union[list[ast.stmt], ast.stmt]"
+    ast_object: list[ast.stmt] | ast.stmt
     if len(body) == 1:
         ast_object = body[0]
     else:
@@ -61,7 +66,7 @@ def parse(source: Union[str, Callable], squeeze: bool = True) -> Union[Expr, Sym
     return out
 
 
-_ParseFunc = Callable[[Any], Union[Symbol, Expr]]
+_ParseFunc = Callable[[Any], "Symbol | Expr"]
 
 
 class singledispatch:
@@ -69,7 +74,7 @@ class singledispatch:
 
     def __init__(self, func: _ParseFunc):
         self.func = func
-        self._registry: "dict[type, _ParseFunc]" = {}
+        self._registry: dict[type, _ParseFunc] = {}
 
     def __call__(self, *args, **kwargs):
         """Dispatch to the registered function for the type of the first argument."""
@@ -87,13 +92,13 @@ class singledispatch:
 
 
 @singledispatch
-def from_ast(ast_object: Union[ast.AST, list, NoneType]):
+def from_ast(ast_object: "ast.AST | list | None"):
     """Convert AST object to macro-kit object."""
     raise NotImplementedError(f"AST type {type(ast_object)} cannot be converted now.")
 
 
 @from_ast.register
-def _none(ast_object: NoneType):
+def _none(ast_object: None):
     return None
 
 
@@ -202,7 +207,10 @@ def _slice(ast_object: ast.Slice):
 @from_ast.register
 def _dict(ast_object: ast.Dict):
     return symbol(
-        {from_ast(k): from_ast(v) for k, v in zip(ast_object.keys, ast_object.values)}
+        {
+            from_ast(k): from_ast(v)
+            for k, v in zip(ast_object.keys, ast_object.values, strict=False)
+        }
     )
 
 
@@ -252,7 +260,7 @@ def _lambda(ast_object: ast.Lambda):
     args = [from_ast(k) for k in fargs.args[:nargs]]
     kwargs = [
         Expr(Head.kw, [from_ast(k), from_ast(v)])
-        for k, v in zip(fargs.args[nargs:], fargs.defaults)
+        for k, v in zip(fargs.args[nargs:], fargs.defaults, strict=False)
     ]
     return Expr(
         head,
@@ -328,7 +336,7 @@ if sys.version_info >= (3, 10):
     @from_ast.register
     def _match_class(ast_object: ast.MatchClass):
         kwargs = []
-        for a, p in zip(ast_object.kwd_attrs, ast_object.kwd_patterns):
+        for a, p in zip(ast_object.kwd_attrs, ast_object.kwd_patterns, strict=False):
             kwargs.append(Expr(Head.kw, [Symbol(a), from_ast(p)]))
 
         expr = Expr(
@@ -360,7 +368,7 @@ if sys.version_info >= (3, 10):
     @from_ast.register
     def _match_mapping(ast_object: ast.MatchMapping):
         args = []
-        for k, v in zip(ast_object.keys, ast_object.patterns):
+        for k, v in zip(ast_object.keys, ast_object.patterns, strict=False):
             args.append(Expr(Head.annotate, [from_ast(k), from_ast(v)]))
         if ast_object.rest:
             args.append(Expr(Head.starstar, [Symbol(ast_object.rest)]))
@@ -454,7 +462,7 @@ def _function_def(ast_object: ast.FunctionDef):
         _call_args.insert(len(fargs.posonlyargs), Symbol._reserved("/"))
     _call_args.extend(
         Expr(Head.kw, [from_ast(k), from_ast(v)])
-        for k, v in zip(fargs.args[nargs:], fargs.defaults)
+        for k, v in zip(fargs.args[nargs:], fargs.defaults, strict=False)
     )  # kwargs
     if vararg is not None:  # *args
         _input_expr = Expr(Head.star, [Symbol(vararg.arg)])
@@ -467,7 +475,7 @@ def _function_def(ast_object: ast.FunctionDef):
         _call_args.append(Symbol._reserved("*"))
         _call_args.extend(
             Expr(Head.kw, [from_ast(k), from_ast(v)])
-            for k, v in zip(fargs.kwonlyargs, fargs.kw_defaults)
+            for k, v in zip(fargs.kwonlyargs, fargs.kw_defaults, strict=False)
         )
     if fargs.kwarg:  # **kwargs
         _input_expr = Expr(Head.starstar, [Symbol(fargs.kwarg.arg)])
@@ -605,7 +613,7 @@ def _class(ast_object: ast.ClassDef):
     args = [from_ast(k) for k in ast_object.bases]
     kwargs = [from_ast(kw) for kw in ast_object.keywords]
     name = Symbol(ast_object.name)
-    _cls: Union[Symbol, Expr]
+    _cls: Symbol | Expr
     if args or kwargs:
         _cls = Expr(Head.call, [name] + args + kwargs)
     else:
@@ -642,13 +650,6 @@ def _named_expr(ast_object: ast.NamedExpr):
     return Expr(head, args)
 
 
-if sys.version_info < (3, 9):
-
-    @from_ast.register
-    def _index(ast_object: ast.Index):
-        return from_ast(ast_object.value)  # type: ignore
-
-
 def _nest_compare(ops: "list[ast.cmpop]", values: "list[ast.expr]"):
     if len(ops) == 1:
         return [AST_BINOP_MAP[type(ops[0])], from_ast(values[0]), from_ast(values[1])]
@@ -661,7 +662,7 @@ def _nest_compare(ops: "list[ast.cmpop]", values: "list[ast.expr]"):
 
 
 def _nest_joinedstr(ast_object: ast.JoinedStr):
-    strs: "list[str]" = []
+    strs: list[str] = []
     for k in ast_object.values:
         if isinstance(k, ast.FormattedValue):
             _id = ast.unparse(k.value)
@@ -682,7 +683,7 @@ def _nest_joinedstr(ast_object: ast.JoinedStr):
             else:
                 raise RuntimeError(f"Unknown format_spec type: {type(k.format_spec)}")
         elif isinstance(k, ast.Constant):
-            strs.append(k.value)
+            strs.append(str(k.value))
         else:
             raise RuntimeError(f"Unknown JoinedStr value type: {type(k)}")
     return "".join(strs)

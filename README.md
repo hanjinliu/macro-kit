@@ -14,13 +14,13 @@ The design of AST in this package is strongly inspired by [Julia metaprogramming
 
 - use pip
 
-```
+```sh
 pip install macro-kit -U
 ```
 
 - from source
 
-```
+```sh
 pip install git+https://github.com/hanjinliu/macro-kit
 ```
 

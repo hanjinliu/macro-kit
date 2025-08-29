@@ -1,7 +1,7 @@
 import builtins
+import inspect
 from copy import deepcopy
 from numbers import Number
-from weakref import WeakValueDictionary
 from types import FunctionType, ModuleType
 from typing import (
     Any,
@@ -9,15 +9,14 @@ from typing import (
     Iterable,
     Iterator,
     Sequence,
-    overload,
     Union,
+    overload,
 )
-import inspect
 
-from macrokit.head import EXEC, Head, HAS_BLOCK
-from macrokit.type_map import _TYPE_MAP, register_type
-from macrokit._validator import validator
 from macrokit._symbol import Symbol
+from macrokit._validator import validator
+from macrokit.head import EXEC, HAS_BLOCK, Head
+from macrokit.type_map import _TYPE_MAP, register_type
 
 
 def str_(expr: Any, indent: int = 0):
@@ -31,7 +30,10 @@ def str_(expr: Any, indent: int = 0):
 def str_lmd(expr: Any, indent: int = 0):
     """Convert str into a proper lambda function definition."""
     s = str(expr)
-    call = s.lstrip("<lambda>(").rstrip(")")
+    if s.startswith("<lambda>(") and s.endswith(")"):
+        call = s[9:-1]
+    else:
+        call = s
     return " " * indent + f"lambda {call}"
 
 
@@ -317,14 +319,14 @@ class Expr:
             Updated variable namespace. Will be a mapping from symbols to values.
 
         """
-        _glb: "dict[str, Any]" = {
+        _glb: dict[str, Any] = {
             (sym.name if isinstance(sym, Symbol) else sym): v
             for sym, v in _globals.items()
         }
 
         # use registered modules
         if _STORED_VALUES:
-            format_dict: "dict[Symbol, _Expr]" = {}
+            format_dict: dict[Symbol, _Expr] = {}
             for id_, (sym, obj) in _STORED_VALUES.items():
                 if isinstance(sym, Expr):
                     continue
@@ -369,7 +371,7 @@ class Expr:
     @classmethod
     def parse_call(
         cls,
-        func: Union[Callable, _Expr],
+        func: "Callable | _Expr",
         args: "tuple[Any, ...] | None" = None,
         kwargs: "dict[str, Any] | None" = None,
     ) -> "Expr":
@@ -468,7 +470,7 @@ class Expr:
         _kwargs = arguments[i:]
 
         # prepare namespaces
-        args_ns: "dict[Union[str, _Expr], Any]" = ns.copy()
+        args_ns: dict[str | _Expr, Any] = ns.copy()
         args_ns[symbol(_tuple)] = _tuple
         kwargs_ns = ns.copy()
 
@@ -641,16 +643,14 @@ class Expr:
         return parse(inspect.getsource(f))
 
     @overload
-    def format(self, mapping: dict, inplace: bool = False) -> "Expr":
-        ...
+    def format(self, mapping: dict, inplace: bool = False) -> "Expr": ...
 
     @overload
     def format(
         self,
         mapping: "Iterable[tuple[Any, _Expr]]",
         inplace: bool = False,
-    ) -> "Expr":
-        ...
+    ) -> "Expr": ...
 
     def format(self, mapping, inplace=False) -> "Expr":
         """
@@ -785,7 +785,7 @@ def _iter_lines(expr: Expr) -> "Iterator[Symbol | Expr]":
 
 
 def _check_format_mapping(mapping_list: Iterable) -> "dict[Symbol, _Expr]":
-    _dict: "dict[Symbol, _Expr]" = {}
+    _dict: dict[Symbol, _Expr] = {}
     for comp in mapping_list:
         if len(comp) != 2:
             raise ValueError("Wrong style of mapping list.")
@@ -814,15 +814,14 @@ def _tuple(*args) -> tuple:
 # Stored symbols and the actual values. These will be used even after parse()
 # method, to make parse(str(macro)) executable.
 _STORED_VALUES: "dict[int, tuple[_Expr, Any]]" = {}
-_STORED_SYMBOLS: "WeakValueDictionary[str, Any]" = WeakValueDictionary()
+_STORED_SYMBOLS: "dict[str, Any]" = {}
 
 # Map to speed up type check
 _SUBCLASS_MAP: "dict[type, type]" = {}
 
 
 def symbol(obj: Any, constant: bool = True) -> _Expr:
-    """
-    Make a proper Symbol or Expr instance from any objects.
+    """Make a proper Symbol or Expr instance from any objects.
 
     Unlike Symbol(...) constructor, which directly make a Symbol from a string, this
     function checks input type and determine the optimal string to represent the
@@ -848,7 +847,7 @@ def symbol(obj: Any, constant: bool = True) -> _Expr:
     obj_id = id(obj)
     _stored = False
     if constant and obj_id in _STORED_VALUES:
-        seq: Union[str, _Expr] = _STORED_VALUES[obj_id][0]
+        seq: str | _Expr = _STORED_VALUES[obj_id][0]
         _stored = True
     elif not constant or obj_id in Symbol._variables:
         seq = Symbol.make_symbol_str(obj)
@@ -934,6 +933,16 @@ def symbol_stored_at(id: int) -> _Expr:
     return _STORED_VALUES[id][0]
 
 
+def init_stored():
+    """Initialize all the stored symbols and values."""
+    _STORED_VALUES.clear()
+    _STORED_SYMBOLS.clear()
+    for name, obj in builtins.__dict__.items():
+        if name.startswith("_") or isinstance(obj, ModuleType):
+            continue
+        _STORED_VALUES[id(obj)] = (symbol(obj), obj)
+
+
 class PrettyString(str):
     """Just for showing the dumped expression."""
 
@@ -975,7 +984,4 @@ register_type(slice, lambda e: Expr(Head.call, [slice, e.start, e.stop, e.step])
 register_type(range, lambda e: Expr(Head.call, [range, e.start, e.stop, e.step]))
 
 # install builtin variables
-for name, obj in builtins.__dict__.items():
-    if name.startswith("_") or isinstance(obj, ModuleType):
-        continue
-    _STORED_VALUES[id(obj)] = (symbol(obj), obj)
+init_stored()

@@ -10,7 +10,7 @@ readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.9"
 authors = [
-    { name = "Hanjin Liu", email = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp" },
+    { name = "Hanjin Liu", email = "liuhanjin.sc@gmail.com" },
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -78,12 +78,13 @@ select = [
   "YTT",
 ]
 ignore = [
-  "A001", "A002", "A003", "ARG001", "ARG002",
+  "A001", "A002", "A003", "ARG001", "ARG002", "ARG005",
   # Allow non-abstract empty methods in abstract base classes
-  "B027", "B904", "B006",
+  "B027", "B904", "B006", "B007",
   "E501", "E741",
   # Ignore complexity
-  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLW0642", "PLW1641", "PLC0415",
   "UP038", "RUF001", "PLC1901", "N814", "UP035",
   "T201", "PLW0603", "PLW2901",
+  "UP036",
 ]

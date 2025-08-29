@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Dict, Set
+from typing import Any
 
 _OFFSET = None
 
@@ -8,14 +8,14 @@ class Symbol:
     """A class that represents Python symbol in the context of metaprogramming."""
 
     # ID of global variables
-    _variables: Set[int] = set()
+    _variables: set[int] = set()
 
-    def __init__(self, seq: Any, object_id: int = None):
+    def __init__(self, seq: Any, object_id: "int | None" = None):
         self._name = str(seq)
         self.object_id = object_id or id(seq)
         self.constant = True
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         """Convert Symbol object into a dict."""
         return {
             "name": self.name,
@@ -35,8 +35,7 @@ class Symbol:
         self._name = newname
 
     def eval(self, _globals: dict = {}, _locals: dict = {}) -> Any:
-        """
-        Evaluate symbol.
+        """Evaluate symbol.
 
         Parameters
         ----------
@@ -80,8 +79,7 @@ class Symbol:
 
     @classmethod
     def var(cls, identifier: str):
-        """
-        Make a variable symbol.
+        """Make a variable symbol.
 
         Same indentifier with same type always returns identical symbol.
         """
